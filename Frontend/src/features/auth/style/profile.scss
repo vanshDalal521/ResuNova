@@ -1,0 +1,107 @@
+.profile-menu {
+    position: relative;
+    z-index: 100;
+
+    &__trigger {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        background: var(--glass);
+        border: 1px solid var(--glass-border);
+        padding: 0.5rem 1rem;
+        border-radius: var(--radius-xl);
+        cursor: pointer;
+        transition: all 0.3s cubic-bezier(0.23, 1, 0.32, 1);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+
+        &:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(255, 255, 255, 0.2);
+            transform: translateY(-1px);
+        }
+
+        .avatar {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, var(--p), var(--s));
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 700;
+            font-size: 0.9rem;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .username {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--txt);
+        }
+    }
+
+    &__dropdown {
+        position: absolute;
+        top: calc(100% + 1rem);
+        right: 0;
+        width: 240px;
+        background: var(--card);
+        border: 1px solid var(--glass-border);
+        border-radius: var(--radius-lg);
+        padding: 0.75rem;
+        backdrop-filter: blur(40px) saturate(180%);
+        -webkit-backdrop-filter: blur(40px) saturate(180%);
+        box-shadow: 
+            0 20px 40px rgba(0,0,0,0.4),
+            inset 0 0 0 1px var(--glass-inner-glow);
+        transform-origin: top right;
+
+        .dropdown-header {
+            padding: 0.75rem 0.75rem 1rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            margin-bottom: 0.5rem;
+
+            p {
+                margin: 0;
+                &.name { font-weight: 700; color: white; font-size: 1rem; }
+                &.email { font-size: 0.8rem; color: var(--txt-muted); margin-top: 0.2rem; }
+            }
+        }
+
+        .dropdown-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem 1rem;
+            border-radius: 0.75rem;
+            color: var(--txt);
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: none;
+            background: transparent;
+            width: 100%;
+            text-align: left;
+
+            &:hover {
+                background: rgba(255, 255, 255, 0.05);
+                color: white;
+            }
+
+            &--logout {
+                color: #ff4d4d;
+                &:hover {
+                    background: rgba(255, 77, 77, 0.1);
+                    color: #ff4d4d;
+                }
+            }
+
+            svg {
+                opacity: 0.7;
+            }
+        }
+    }
+}

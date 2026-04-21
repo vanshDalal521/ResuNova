@@ -1,0 +1,41 @@
+.button {
+    border: none;
+    outline: none;
+    padding: 0.8rem 1.6rem;
+    border-radius: 1rem;
+    cursor: pointer;
+    font-weight: 700;
+    font-family: 'Outfit', sans-serif;
+    transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.6rem;
+
+    &.primary-button {
+        background: linear-gradient(135deg, var(--p), var(--s));
+        color: white;
+        box-shadow: 0 10px 20px -5px rgba(99, 102, 241, 0.4);
+
+        &:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 15px 30px -8px rgba(99, 102, 241, 0.5);
+            filter: brightness(1.1);
+        }
+    }
+
+    &.secondary-button {
+        background: rgba(255, 255, 255, 0.05);
+        color: white;
+        border: 1px solid var(--glass-border);
+
+        &:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+    }
+
+    &:active {
+        transform: scale(0.96);
+    }
+}

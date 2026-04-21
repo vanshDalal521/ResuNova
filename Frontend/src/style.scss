@@ -1,0 +1,104 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Plus+Jakarta+Sans:wght@400;700;800&display=swap');
+
+:root {
+    /* Premium Palette */
+    --p: #6366f1;         /* Indigo */
+    --s: #c084fc;         /* Violet */
+    --a: #2dd4bf;         /* Teal */
+    --bg: #030712;        /* Darkest Navy */
+    
+    /* Semantic Colors */
+    --card: rgba(17, 24, 39, 0.45);
+    --border: rgba(255, 255, 255, 0.08);
+    --txt: #f9fafb;
+    --txt-muted: #9ca3af;
+    
+    /* Apple Glass System */
+    --glass: rgba(255, 255, 255, 0.03);
+    --glass-high: rgba(255, 255, 255, 0.06);
+    --glass-border: rgba(255, 255, 255, 0.12);
+    --glass-inner-glow: rgba(255, 255, 255, 0.05);
+    
+    /* Eye Relaxing Geometry */
+    --radius-xl: 32px;
+    --radius-lg: 24px;
+    --radius-md: 16px;
+    --radius-sm: 12px;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Outfit', sans-serif;
+}
+
+body {
+    background-color: var(--bg);
+    color: var(--txt);
+    overflow-x: hidden;
+    min-height: 100vh;
+}
+
+#root {
+    width: 100%;
+    min-height: 100vh;
+    position: relative;
+    z-index: 1;
+}
+
+/* Liquid Glass Background Elements */
+.liquid-bg {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: -1;
+    overflow: hidden;
+    background: radial-gradient(circle at 50% 50%, #111827, #030712);
+}
+
+.orb {
+    position: absolute;
+    filter: blur(100px);
+    border-radius: 50%;
+    opacity: 0.5;
+    animation: float 25s infinite alternate ease-in-out;
+    mix-blend-mode: screen;
+}
+
+.orb-1 { width: 600px; height: 600px; background: radial-gradient(circle, var(--p), transparent); top: -200px; right: -100px; animation-delay: 0s; }
+.orb-2 { width: 800px; height: 800px; background: radial-gradient(circle, var(--s), transparent); bottom: -300px; left: -200px; animation-delay: -7s; }
+.orb-3 { width: 500px; height: 500px; background: radial-gradient(circle, var(--a), transparent); top: 20%; left: 30%; opacity: 0.3; animation-delay: -12s; }
+
+@keyframes float {
+    0% { transform: translate(0, 0) scale(1); }
+    100% { transform: translate(100px, 50px) scale(1.1); }
+}
+
+h1, h2, h3 {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+}
+
+.highlight {
+    background: linear-gradient(135deg, var(--p), var(--s));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+/* Glassmorphism Utilities */
+.glass-card {
+    background: var(--card);
+    backdrop-filter: blur(40px) saturate(180%);
+    -webkit-backdrop-filter: blur(40px) saturate(180%);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-xl);
+    box-shadow: 
+        0 25px 50px -12px rgba(0, 0, 0, 0.5),
+        inset 0 0 0 1px var(--glass-inner-glow);
+    position: relative;
+    overflow: hidden;
+}
