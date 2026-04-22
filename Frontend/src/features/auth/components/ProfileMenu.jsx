@@ -2,10 +2,12 @@ import React, { useState, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAuth } from '../hooks/useAuth'
 import { LogOut, User, Settings, Shield } from 'lucide-react'
+import { useNavigate } from 'react-router'
 import "../style/profile.scss"
 
 const ProfileMenu = () => {
     const { user, handleLogout } = useAuth()
+    const navigate = useNavigate()
     const [ isOpen, setIsOpen ] = useState(false)
     const menuRef = useRef(null)
 
@@ -47,7 +49,13 @@ const ProfileMenu = () => {
                             <p className="email">{user.email}</p>
                         </div>
 
-                        <button className="dropdown-item">
+                        <button 
+                            className="dropdown-item"
+                            onClick={() => {
+                                navigate('/profile')
+                                setIsOpen(false)
+                            }}
+                        >
                             <User size={16} />
                             View Account
                         </button>
@@ -60,7 +68,10 @@ const ProfileMenu = () => {
                         
                         <button 
                             className="dropdown-item dropdown-item--logout"
-                            onClick={handleLogout}
+                            onClick={() => {
+                                handleLogout()
+                                setIsOpen(false)
+                            }}
                         >
                             <LogOut size={16} />
                             Authorize Logout
