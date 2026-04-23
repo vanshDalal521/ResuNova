@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "Root package for ResuNova",
   "scripts": {
-    "build": "cd Backend && npm install",
+    "build": "cd Backend && npm install && cd ../Frontend && npm install && npm run build",
     "start": "npm start --prefix Backend",
     "install-all": "npm install && cd Backend && npm install && cd ../Frontend && npm install"
   },
