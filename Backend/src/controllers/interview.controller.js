@@ -71,8 +71,17 @@ async function generateInterViewReportController(req, res, next) {
             interviewReport
         })
     } catch (error) {
-        console.error("Critical error in interview controller:", error);
-        next(error)
+        console.error("CRITICAL ERROR in generateInterViewReportController:");
+        console.error("Message:", error.message);
+        console.error("Stack:", error.stack);
+        
+        // Return more specific error message to frontend for debugging
+        res.status(500).json({
+            success: false,
+            message: "Internal Server Error during report generation",
+            error: error.message,
+            debug: process.env.NODE_ENV === "development" ? error.stack : "Check Vercel logs for details"
+        });
     }
 }
 
