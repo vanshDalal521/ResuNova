@@ -62,7 +62,7 @@ async function generateInterviewReport({ resume, selfDescription, jobDescription
         while (retries > 0) {
             try {
                 result = await ai.models.generateContent({
-                    model: "models/gemini-2.5-flash",
+                    model: "gemini-2.5-flash",
                     contents: [{ role: "user", parts: [{ text: prompt }] }],
                     config: {
                         responseMimeType: "application/json",
@@ -163,7 +163,7 @@ async function generateResumePdf({ resume, selfDescription, jobDescription }) {
         while (retries > 0) {
             try {
                 result = await ai.models.generateContent({
-                    model: "models/gemini-flash-latest",
+                    model: "gemini-flash-latest",
                     contents: [{ role: "user", parts: [{ text: prompt }] }],
                     config: {
                         responseMimeType: "application/json",
