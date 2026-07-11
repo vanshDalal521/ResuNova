@@ -42,6 +42,17 @@ app.use(express.json({ limit: "1mb" }))
 app.use(express.urlencoded({ extended: true, limit: "1mb" }))
 app.use(cookieParser())
 
+// DB connection middleware — Vercel serverless cold-start fix
+// On Render/local, server.js already connected; this is a ~0ms no-op
+app.use(async (req, res, next) => {
+    if (mongoose.connection.readyState !== 1) {
+        await mongoose.connect(process.env.MONGO_URI, {
+            serverSelectionTimeoutMS: 5000,
+        })
+    }
+    next()
+})
+
 // Custom NoSQL injection sanitizer (compatible with Express 5)
 const NOSQL_REGEX = /^\$|\./;
 function sanitizeValue(val) {
