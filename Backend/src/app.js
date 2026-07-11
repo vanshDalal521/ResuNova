@@ -8,6 +8,9 @@ const hpp = require("hpp")
 
 const app = express()
 
+// Trust Render/Vercel/Heroku proxy for rate limiting, secure cookies, IP detection
+app.set("trust proxy", true)
+
 // Stripe webhook handler — require early for webhook route placement
 const paymentController = require("./controllers/payment.controller")
 

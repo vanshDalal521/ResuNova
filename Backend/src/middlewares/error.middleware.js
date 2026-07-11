@@ -2,8 +2,11 @@
  * Global Error Handling Middleware
  */
 const errorHandler = (err, req, res, next) => {
-    console.error(`[Error] ${err.message}`)
-    if (err.stack) console.error(err.stack.split('\n').slice(0, 6).join('\n'))
+    console.error(`[${err.name || "Error"}] ${err.message}`)
+    if (err.stack) {
+        const lines = err.stack.split('\n')
+        console.error(lines.slice(0, 8).join('\n'))
+    }
 
     // Multer errors
     if (err.code === "LIMIT_FILE_SIZE") {
