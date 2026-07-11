@@ -108,58 +108,63 @@ async function registerUserController(req, res, next) {
  * @description login a user with email and password
  * @access Public
  */
-async function loginUserController(req, res) {
-    const parsed = loginSchema.safeParse(req.body)
-    if (!parsed.success) {
-        const firstError = parsed.error.errors[0]
-        return res.status(400).json({ message: "Invalid email or password" })
-    }
-
-    const { email, password } = parsed.data
-
-    const user = await userModel.findOne({
-        $or: [
-            { email: email.toLowerCase() },
-            { username: email }
-        ]
-    })
-
-    if (!user) {
-        return res.status(400).json({ message: "Invalid email or password" })
-    }
-
-    const isPasswordValid = await bcrypt.compare(password, user.password)
-
-    if (!isPasswordValid) {
-        return res.status(400).json({ message: "Invalid email or password" })
-    }
-
-    const token = jwt.sign(
-        { id: user._id, username: user.username },
-        process.env.JWT_SECRET,
-        { expiresIn: "1d" }
-    )
-
-    res.cookie("token", token, COOKIE_OPTIONS)
-
-    const { getFreeUsageStatus } = require("../services/entitlement.service")
-    let entitlements = null
+async function loginUserController(req, res, next) {
     try {
-        entitlements = await getFreeUsageStatus(user._id)
-    } catch { }
+        const parsed = loginSchema.safeParse(req.body)
+        if (!parsed.success) {
+            const firstError = parsed.error.errors[0]
+            return res.status(400).json({ message: "Invalid email or password" })
+        }
 
-    res.status(200).json({
-        message: "User loggedIn successfully.",
-        user: {
-            id: user._id,
-            username: user.username,
-            email: user.email,
-            plan: user.plan,
-            reportsUsedThisMonth: user.reportsUsedThisMonth,
-            createdAt: user.createdAt
-        },
-        entitlements,
-    })
+        const { email, password } = parsed.data
+
+        const user = await userModel.findOne({
+            $or: [
+                { email: email.toLowerCase() },
+                { username: email }
+            ]
+        })
+
+        if (!user) {
+            return res.status(400).json({ message: "Invalid email or password" })
+        }
+
+        const isPasswordValid = await bcrypt.compare(password, user.password)
+
+        if (!isPasswordValid) {
+            return res.status(400).json({ message: "Invalid email or password" })
+        }
+
+        const token = jwt.sign(
+            { id: user._id, username: user.username },
+            process.env.JWT_SECRET,
+            { expiresIn: "1d" }
+        )
+
+        res.cookie("token", token, COOKIE_OPTIONS)
+
+        const { getFreeUsageStatus } = require("../services/entitlement.service")
+        let entitlements = null
+        try {
+            entitlements = await getFreeUsageStatus(user._id)
+        } catch { }
+
+        res.status(200).json({
+            message: "User loggedIn successfully.",
+            user: {
+                id: user._id,
+                username: user.username,
+                email: user.email,
+                plan: user.plan,
+                reportsUsedThisMonth: user.reportsUsedThisMonth,
+                createdAt: user.createdAt
+            },
+            entitlements,
+        })
+    } catch (error) {
+        console.error("Login error:", error.message, error.stack)
+        next(error)
+    }
 }
 
 /**
@@ -192,32 +197,37 @@ async function logoutUserController(req, res) {
  * @description get the current logged in user details.
  * @access private
  */
-async function getMeController(req, res) {
-    const user = await userModel.findById(req.user.id).select("-password")
-
-    if (!user) {
-        return res.status(401).json({ message: "User not found" })
-    }
-
-    const { getFreeUsageStatus } = require("../services/entitlement.service")
-    let entitlements = null
+async function getMeController(req, res, next) {
     try {
-        entitlements = await getFreeUsageStatus(req.user.id)
-    } catch { }
+        const user = await userModel.findById(req.user.id).select("-password")
 
-    res.status(200).json({
-        message: "User details fetched successfully",
-        user: {
-            id: user._id,
-            username: user.username,
-            email: user.email,
-            plan: user.plan,
-            subscriptionStatus: user.subscriptionStatus,
-            reportsUsedThisMonth: user.reportsUsedThisMonth,
-            createdAt: user.createdAt,
-        },
-        entitlements,
-    })
+        if (!user) {
+            return res.status(401).json({ message: "User not found" })
+        }
+
+        const { getFreeUsageStatus } = require("../services/entitlement.service")
+        let entitlements = null
+        try {
+            entitlements = await getFreeUsageStatus(req.user.id)
+        } catch { }
+
+        res.status(200).json({
+            message: "User details fetched successfully",
+            user: {
+                id: user._id,
+                username: user.username,
+                email: user.email,
+                plan: user.plan,
+                subscriptionStatus: user.subscriptionStatus,
+                reportsUsedThisMonth: user.reportsUsedThisMonth,
+                createdAt: user.createdAt,
+            },
+            entitlements,
+        })
+    } catch (error) {
+        console.error("getMe error:", error.message, error.stack)
+        next(error)
+    }
 }
 
 module.exports = {
