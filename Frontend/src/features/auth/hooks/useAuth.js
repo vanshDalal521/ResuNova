@@ -1,13 +1,16 @@
-import { useContext, useEffect } from "react";
+import { useContext } from "react";
 import { AuthContext } from "../auth.context";
-import { login, register, logout, getMe } from "../services/auth.api";
+import { login, register, logout } from "../services/auth.api";
 
 
 
 export const useAuth = () => {
 
     const context = useContext(AuthContext)
-    const { user, setUser, loading, setLoading } = context
+    if (!context) {
+        throw new Error("useAuth must be used within an AuthProvider")
+    }
+    const { user, setUser, entitlements, setEntitlements, loading, setLoading } = context
 
 
     const handleLogin = async ({ email, password }) => {
@@ -16,11 +19,15 @@ export const useAuth = () => {
             const data = await login({ email, password })
             if (data && data.user) {
                 setUser(data.user)
+                if (data.entitlements) {
+                    setEntitlements(data.entitlements)
+                }
                 return true
             }
         } catch (err) {
             console.error("Login Error:", err)
             setUser(null)
+            setEntitlements(null)
             throw new Error(err.response?.data?.message || "Invalid email or password")
         } finally {
             setLoading(false)
@@ -34,11 +41,15 @@ export const useAuth = () => {
             const data = await register({ username, email, password })
             if (data && data.user) {
                 setUser(data.user)
+                if (data.entitlements) {
+                    setEntitlements(data.entitlements)
+                }
                 return true
             }
         } catch (err) {
             console.error("Registration Error:", err)
             setUser(null)
+            setEntitlements(null)
             throw new Error(err.response?.data?.message || "Registration failed")
         } finally {
             setLoading(false)
@@ -51,6 +62,7 @@ export const useAuth = () => {
         try {
             await logout()
             setUser(null)
+            setEntitlements(null)
         } catch (err) {
             console.error("Logout Error:", err)
         } finally {
@@ -58,24 +70,5 @@ export const useAuth = () => {
         }
     }
 
-    useEffect(() => {
-
-        const getAndSetUser = async () => {
-            try {
-                const data = await getMe()
-                if (data && data.user) {
-                    setUser(data.user)
-                }
-            } catch (err) { 
-                 setUser(null)
-            } finally {
-                setLoading(false)
-            }
-        }
-
-        getAndSetUser()
-
-    }, [])
-
-    return { user, loading, handleRegister, handleLogin, handleLogout }
+    return { user, entitlements, setEntitlements, loading, handleRegister, handleLogin, handleLogout }
 }

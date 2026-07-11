@@ -1,0 +1,200 @@
+.upgrade-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(5, 5, 30, 0.6);
+  backdrop-filter: blur(4px);
+  z-index: 1000;
+}
+
+.upgrade-modal {
+  width: min(440px, calc(100vw - 32px));
+  max-height: 90vh;
+  overflow-y: auto;
+  background: var(--card, rgba(255, 255, 255, 0.55));
+  backdrop-filter: blur(20px);
+  border: 1px solid var(--border, rgba(167, 183, 231, 0.15));
+  border-radius: 20px;
+  padding: 32px 28px 24px;
+  box-shadow: 0 25px 80px rgba(5, 5, 30, 0.3);
+
+  &:focus {
+    outline: none;
+  }
+
+  &__close {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(167, 183, 231, 0.1);
+    color: var(--txt-muted, #222255);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 0.2s;
+
+    &:hover {
+      background: rgba(167, 183, 231, 0.25);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--a, #A7B7E7);
+      outline-offset: 2px;
+    }
+  }
+
+  &__badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 12px;
+    border-radius: 100px;
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    color: #fff;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    margin-bottom: 16px;
+  }
+
+  &__title {
+    font-family: "Bebas Neue", sans-serif;
+    font-size: 1.8rem;
+    line-height: 1.15;
+    color: var(--txt, #0d0d2b);
+    margin: 0 0 12px;
+    letter-spacing: 0.01em;
+  }
+
+  &__desc {
+    font-size: 0.9rem;
+    line-height: 1.65;
+    color: var(--txt-muted, #222255);
+    margin: 0 0 8px;
+  }
+
+  &__reset-date {
+    font-size: 0.82rem;
+    color: var(--txt-dim, #3d3d70);
+    margin: 4px 0 16px;
+    padding: 8px 12px;
+    background: rgba(167, 183, 231, 0.1);
+    border-radius: 8px;
+    display: inline-block;
+  }
+
+  &__benefits {
+    list-style: none;
+    padding: 0;
+    margin: 16px 0 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  &__benefit {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.88rem;
+    color: var(--txt, #0d0d2b);
+    font-weight: 450;
+  }
+
+  &__benefit-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.12), rgba(139, 92, 246, 0.12));
+    color: #6366f1;
+    flex-shrink: 0;
+  }
+
+  &__cta {
+    width: 100%;
+    padding: 14px 20px;
+    border: none;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #0d0d2b 0%, #1a1a4e 100%);
+    color: #fff;
+    font-size: 1rem;
+    font-weight: 600;
+    font-family: "Outfit", sans-serif;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    cursor: pointer;
+    transition: opacity 0.2s, transform 0.15s;
+    margin-bottom: 10px;
+
+    &:hover {
+      opacity: 0.92;
+      transform: translateY(-1px);
+    }
+
+    &:active {
+      transform: translateY(0);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--a, #A7B7E7);
+      outline-offset: 2px;
+    }
+  }
+
+  &__secondary {
+    width: 100%;
+    padding: 10px;
+    border: none;
+    background: none;
+    color: var(--txt-muted, #222255);
+    font-size: 0.88rem;
+    font-family: "Outfit", sans-serif;
+    cursor: pointer;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    text-decoration-color: rgba(167, 183, 231, 0.3);
+    transition: color 0.2s;
+
+    &:hover {
+      color: var(--txt, #0d0d2b);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--a, #A7B7E7);
+      outline-offset: 2px;
+      border-radius: 4px;
+    }
+  }
+
+  &__trust {
+    text-align: center;
+    font-size: 0.75rem;
+    color: var(--txt-dim, #3d3d70);
+    margin: 16px 0 0;
+    opacity: 0.6;
+  }
+}
+
+/* Responsive adjustments */
+@media (max-width: 480px) {
+  .upgrade-modal {
+    padding: 24px 20px 20px;
+
+    &__title {
+      font-size: 1.5rem;
+    }
+  }
+}

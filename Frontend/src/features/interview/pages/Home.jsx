@@ -1,299 +1,441 @@
-import React, { useState, useRef } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import "../style/home.scss"
 import { useInterview } from '../hooks/useInterview.js'
 import { useNavigate } from 'react-router'
 import { motion, AnimatePresence } from 'framer-motion'
-import { 
-    Briefcase, 
-    User, 
-    UploadCloud, 
-    Info, 
-    Sparkles, 
-    Clock, 
-    ChevronRight,
-    Search,
-    FileText
+import {
+  Briefcase, User, UploadCloud, Sparkles, Clock, ChevronRight,
+  FileText, Building2, ArrowUpFromLine, Target, Zap, ScrollText, Crown
 } from 'lucide-react'
 import toast from 'react-hot-toast'
-import ProfileMenu from '../../auth/components/ProfileMenu'
+import Navbar from '../../../components/Navbar'
+import { useAuth } from '../../auth/hooks/useAuth'
+import { useEntitlements } from '../../auth/hooks/useEntitlements'
+import UpgradeToProModal from '../../../components/UpgradeToProModal'
 
 const Home = () => {
-    const { loading, generateReport, reports } = useInterview()
-    const [ jobDescription, setJobDescription ] = useState("")
-    const [ selfDescription, setSelfDescription ] = useState("")
-    const [ companyName, setCompanyName ] = useState("")
-    const [ fileName, setFileName ] = useState("")
-    const resumeInputRef = useRef()
-    const navigate = useNavigate()
+  const { user } = useAuth()
+  const { entitlements, loading: entitlementsLoading, refreshEntitlements, canAnalyze } = useEntitlements()
+  const { loading, generateReport, reports } = useInterview()
+  const [jobDescription, setJobDescription] = useState("")
+  const [selfDescription, setSelfDescription] = useState("")
+  const [companyName, setCompanyName] = useState("")
+  const [fileName, setFileName] = useState("")
+  const [showLimitModal, setShowLimitModal] = useState(false)
+  const resumeInputRef = useRef()
+  const navigate = useNavigate()
 
-    const handleFileChange = (e) => {
-        const file = e.target.files[0]
-        if (file) {
-            if (file.size > 5 * 1024 * 1024) {
-                toast.error("File size exceeds 5MB")
-                e.target.value = ""
-                setFileName("")
-                return
-            }
-            setFileName(file.name)
-            toast.success(`Selected: ${file.name}`)
-        }
+  const isPro = user?.plan === 'pro' && user?.subscriptionStatus === 'active'
+  const usage = entitlements?.usage
+  const used = usage?.used ?? 0
+  const limit = usage?.limit ?? 3
+  const remaining = usage?.remaining ?? 0
+  const blocked = usage?.blocked ?? false
+  const nextResetAt = usage?.nextResetAt
+
+  // Countdown timer
+  const [countdown, setCountdown] = useState("")
+  useEffect(() => {
+    if (!nextResetAt || isPro) return
+    const interval = setInterval(() => {
+      const diff = new Date(nextResetAt).getTime() - Date.now()
+      if (diff <= 0) {
+        clearInterval(interval)
+        setCountdown("Available now")
+        refreshEntitlements()
+        return
+      }
+      const h = Math.floor(diff / 3600000)
+      const m = Math.floor((diff % 3600000) / 60000)
+      const s = Math.floor((diff % 60000) / 1000)
+      setCountdown(h > 0 ? `${h}h ${m}m ${s}s` : `${m}m ${s}s`)
+    }, 1000)
+    return () => clearInterval(interval)
+  }, [nextResetAt, isPro, refreshEntitlements])
+
+  const handleFileChange = (e) => {
+    const file = e.target.files[0]
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error("File size exceeds 5MB")
+        e.target.value = ""
+        setFileName("")
+        return
+      }
+      setFileName(file.name)
+      toast.success(`Selected: ${file.name}`)
+    }
+  }
+
+  const handleGenerateReport = async () => {
+    const resumeFile = resumeInputRef.current.files[0]
+    if (!jobDescription.trim()) {
+      toast.error("Please provide a job description")
+      return
+    }
+    if (!resumeFile && !selfDescription.trim()) {
+      toast.error("Please upload a resume or provide a self-description")
+      return
     }
 
-    const handleGenerateReport = async () => {
-        const resumeFile = resumeInputRef.current.files[0]
-        
-        if (!jobDescription.trim()) {
-            toast.error("Please provide a job description")
-            return
-        }
-
-        if (!resumeFile && !selfDescription.trim()) {
-            toast.error("Please upload a resume or provide a self-description")
-            return
-        }
-
-        const promise = generateReport({ jobDescription, selfDescription, resumeFile, companyName })
-        
-        toast.promise(promise, {
-            loading: 'Generating your custom interview strategy...',
-            success: 'Strategy generated successfully!',
-            error: 'Failed to generate strategy. Please try again.',
-        })
-
-        const data = await promise
-        if (data && data._id) {
-            navigate(`/interview/${data._id}`)
-        }
+    // Check limit before attempting
+    if (!isPro && blocked) {
+      setShowLimitModal(true)
+      return
     }
 
-    if (loading) {
-        return (
-            <motion.main 
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className='loading-screen'
-            >
-                <div className="loading-spinner"></div>
-                <motion.div
-                    initial={{ y: 10, opacity: 0 }}
-                    animate={{ y: 0, opacity: 1 }}
-                    transition={{ delay: 0.2 }}
-                >
-                    <h1>Neural Matching in Progress</h1>
-                    <p>Our agentic core is synthesizing your profile with market benchmarks to generate a deterministic success plan.</p>
-                </motion.div>
-            </motion.main>
-        )
+    try {
+      const data = await generateReport({ jobDescription, selfDescription, resumeFile, companyName })
+      if (data && data._id) {
+        refreshEntitlements()
+        navigate(`/interview/${data._id}`)
+      }
+    } catch (err) {
+      const msg = err?.response?.data?.error?.message || 'Failed to generate strategy. Please try again.'
+      toast.error(msg)
+      if (err?.response?.data?.error?.code === "FREE_ANALYSIS_LIMIT_REACHED") {
+        setShowLimitModal(true)
+      }
+      throw err
     }
+  }
 
+  // Also check backend error for limit
+  const handleGenerateClick = async () => {
+    if (!isPro && blocked) {
+      setShowLimitModal(true)
+      return
+    }
+    try {
+      await handleGenerateReport()
+    } catch (err) {
+      console.error("Report generation failed:", err)
+    }
+  }
+
+  if (loading) {
     return (
-        <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className='home-page'
+      <motion.main
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className="dashboard-loading"
+      >
+        <div className="dashboard-loading__spinner" />
+        <motion.div
+          initial={{ y: 10, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ delay: 0.2 }}
         >
-            {/* Page Header */}
-            <header className='page-header'>
-                <div style={{ position: 'absolute', top: '2rem', right: '2rem' }}>
-                    <ProfileMenu />
-                </div>
-                <motion.h1
-                    initial={{ y: -20, opacity: 0 }}
-                    animate={{ y: 0, opacity: 1 }}
-                    transition={{ duration: 0.6 }}
-                >
-                    Elevate Your <span className='highlight'>Placement Strategy</span>
-                </motion.h1>
-                <motion.p
-                    initial={{ y: -10, opacity: 0 }}
-                    animate={{ y: 0, opacity: 1 }}
-                    transition={{ duration: 0.6, delay: 0.1 }}
-                >
-                    Architect your career path with AI-driven technical blueprints, 
-                    comprehensive behavioral frameworks, and optimized study roadmaps.
-                </motion.p>
-            </header>
+          <h1 className="dashboard-loading__title">Neural Matching in Progress</h1>
+          <p className="dashboard-loading__sub">
+            Our agentic core is synthesizing your profile with market benchmarks to generate a deterministic success plan.
+          </p>
+        </motion.div>
+      </motion.main>
+    )
+  }
 
-            {/* Main Card */}
-            <motion.div 
-                className='interview-card'
-                initial={{ y: 40, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                transition={{ duration: 0.8, delay: 0.2, type: 'spring' }}
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      className="dashboard"
+    >
+      {/* Decorative background orbs */}
+      <div className="dashboard-bg" aria-hidden="true">
+        <div className="dashboard-orb dashboard-orb--1" />
+        <div className="dashboard-orb dashboard-orb--2" />
+        <div className="dashboard-orb dashboard-orb--3" />
+      </div>
+
+      <Navbar />
+
+      <div className="dashboard__container">
+        {/* ── Header ── */}
+        <header className="dashboard-header">
+          <div className="dashboard-header__badges">
+            <motion.div
+              className="dashboard-header__badge"
+              initial={{ y: -10, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.1 }}
             >
-                <div className='interview-card__body'>
-                    {/* Left Panel - Job Description */}
-                    <div className='panel panel--left'>
-                        <div className='panel__header'>
-                            <span className='panel__icon'>
-                                <Briefcase />
-                            </span>
-                            <h2>Position Specifications</h2>
-                            <span className='badge badge--required'>Essential</span>
-                        </div>
-                        
-                        <div className='input-group' style={{ marginBottom: '1.5rem' }}>
-                            <label className='section-label' style={{ display: 'block', marginBottom: '0.5rem' }}>Target Company</label>
-                            <input 
-                                type="text"
-                                value={companyName}
-                                onChange={(e) => setCompanyName(e.target.value)}
-                                className='panel__input'
-                                placeholder="e.g. Google, Amazon, OpenAI..."
-                                style={{
-                                    width: '100%',
-                                    padding: '0.75rem 1rem',
-                                    background: 'rgba(255, 255, 255, 0.05)',
-                                    border: '1px solid rgba(255, 255, 255, 0.1)',
-                                    borderRadius: '8px',
-                                    color: '#e6edf3',
-                                    outline: 'none'
-                                }}
-                            />
-                        </div>
+              <Zap size={12} />
+              AI-Powered Interview Architecture
+            </motion.div>
+            <motion.div
+              className={`dashboard-header__plan-badge ${isPro ? 'dashboard-header__plan-badge--pro' : ''}`}
+              initial={{ y: -10, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.15 }}
+            >
+              {isPro ? (
+                <><Crown size={14} /> Unlimited analyses</>
+              ) : (
+                <>{used}/{limit} analyses used</>
+              )}
+            </motion.div>
+          </div>
 
-                        <label className='section-label' style={{ display: 'block', marginBottom: '0.5rem' }}>Job Description</label>
-                        <textarea
-                            value={jobDescription}
-                            onChange={(e) => setJobDescription(e.target.value)}
-                            className='panel__textarea'
-                            placeholder={`Paste the full job description here...\ne.g. 'Senior Frontend Engineer at Google requires proficiency in React, TypeScript, and large-scale system design...'`}
-                            maxLength={5000}
-                        />
-                        <div className='char-counter'>{jobDescription.length} / 5000 chars</div>
-                    </div>
+          {/* Blocked warning with countdown */}
+          {blocked && !isPro && (
+            <motion.div
+              className="dashboard-header__limit-warning"
+              initial={{ y: -10, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.2 }}
+            >
+              <Clock size={14} />
+              <span>Next free analysis available in <strong>{countdown}</strong></span>
+            </motion.div>
+          )}
 
-                    {/* Vertical Divider */}
-                    <div className='panel-divider' />
+          <motion.h1
+            className="dashboard-header__title"
+            initial={{ y: -20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ duration: 0.6 }}
+          >
+            Elevate Your{' '}
+            <span className="dashboard-header__highlight">Placement Strategy</span>
+          </motion.h1>
+          <motion.p
+            className="dashboard-header__sub"
+            initial={{ y: -10, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ duration: 0.6, delay: 0.1 }}
+          >
+            Transform your resume into a personalized interview blueprint — technical questions,
+            behavioral frameworks, and a day-by-day readiness plan.
+          </motion.p>
+        </header>
 
-                    {/* Right Panel - Profile */}
-                    <div className='panel panel--right'>
-                        <div className='panel__header'>
-                            <span className='panel__icon'>
-                                <User />
-                            </span>
-                            <h2>Candidate Intelligence</h2>
-                        </div>
-
-                        {/* Upload Resume */}
-                        <div className='upload-section'>
-                            <label className='section-label'>
-                                Upload Resume
-                                <span className='badge badge--best'>Best Results</span>
-                            </label>
-                            <label className='dropzone' htmlFor='resume'>
-                                <span className='dropzone__icon'>
-                                    <UploadCloud size={32} />
-                                </span>
-                                <p className='dropzone__title'>{fileName || "Click to upload or drag & drop"}</p>
-                                <p className='dropzone__subtitle'>PDF or DOCX (Max 5MB)</p>
-                                <input 
-                                    ref={resumeInputRef} 
-                                    hidden 
-                                    type='file' 
-                                    id='resume' 
-                                    name='resume' 
-                                    accept='.pdf,.docx'
-                                    onChange={handleFileChange}
-                                />
-                            </label>
-                        </div>
-
-                        {/* OR Divider */}
-                        <div className='or-divider'><span>OR</span></div>
-
-                        {/* Quick Self-Description */}
-                        <div className='self-description'>
-                            <label className='section-label' htmlFor='selfDescription'>Quick Self-Description</label>
-                            <textarea
-                                value={selfDescription}
-                                onChange={(e) => setSelfDescription(e.target.value)}
-                                id='selfDescription'
-                                name='selfDescription'
-                                className='panel__textarea panel__textarea--short'
-                                placeholder="Briefly describe your experience, key skills, and years of experience..."
-                            />
-                        </div>
-
-                        {/* Info Box */}
-                        <div className='info-box'>
-                            <span className='info-box__icon'>
-                                <Info size={18} />
-                            </span>
-                            <p>Providing a <strong>Resume</strong> yields significantly higher accuracy for your plan.</p>
-                        </div>
-                    </div>
+        {/* ── Form ── */}
+        <div className="dashboard-form">
+          <div className="dashboard-form__grid">
+            {/* Position Details */}
+            <motion.div
+              className="dashboard-card"
+              initial={{ y: 40, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ duration: 0.7, delay: 0.15 }}
+            >
+              <div className="dashboard-card__header">
+                <div className="dashboard-card__icon">
+                  <Briefcase size={20} />
                 </div>
-
-                {/* Card Footer */}
-                <div className='interview-card__footer'>
-                    <div className='footer-info'>
-                        <Clock size={14} />
-                        <span>Analysis takes approx. 30 seconds</span>
-                    </div>
-                    <button
-                        onClick={handleGenerateReport}
-                        disabled={loading}
-                        className='generate-btn'>
-                        <Sparkles size={18} />
-                        Initialize Agentic Analysis
-                    </button>
+                <div>
+                  <h2 className="dashboard-card__title">Position Details</h2>
+                  <p className="dashboard-card__sub">Target company and role specifications</p>
                 </div>
+              </div>
+              <div className="dashboard-card__body">
+                <div className="dashboard-field">
+                  <label className="dashboard-field__label">
+                    <Building2 size={14} /> Target Company
+                  </label>
+                  <input
+                    className="dashboard-field__input"
+                    type="text"
+                    value={companyName}
+                    onChange={(e) => setCompanyName(e.target.value)}
+                    placeholder="e.g. Google, Amazon, OpenAI"
+                  />
+                </div>
+                <div className="dashboard-field">
+                  <label className="dashboard-field__label">
+                    <ScrollText size={14} /> Job Description
+                  </label>
+                  <textarea
+                    className="dashboard-field__textarea"
+                    value={jobDescription}
+                    onChange={(e) => setJobDescription(e.target.value)}
+                    placeholder="Paste the full job description here..."
+                    maxLength={5000}
+                  />
+                  <span className="dashboard-field__counter">
+                    {jobDescription.length}/5000
+                  </span>
+                </div>
+              </div>
             </motion.div>
 
-            {/* Recent Reports List */}
-            <AnimatePresence mode="popLayout">
-                {reports && reports.length > 0 && (
-                    <motion.section 
-                        className='recent-reports'
-                        initial={{ opacity: 0, y: 30 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, scale: 0.95 }}
-                        transition={{ duration: 0.5, ease: [0.23, 1, 0.32, 1] }}
-                        layout
-                    >
-                        <h2>My Recent Interview Plans</h2>
-                        <div className='reports-list'>
-                            {reports.map((report, index) => (
-                                <motion.div 
-                                    key={report._id} 
-                                    className='report-item' 
-                                    onClick={() => navigate(`/interview/${report._id}`)}
-                                    initial={{ opacity: 0, y: 20 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    transition={{ delay: 0.05 * index, duration: 0.4 }}
-                                    whileHover={{ y: -8, scale: 1.01 }}
-                                    whileTap={{ scale: 0.98 }}
-                                    layout
-                                >
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                                        <h3 style={{ fontSize: '1.4rem' }}>{report.title || 'Untitled Position'}</h3>
-                                        <ChevronRight size={18} color="#8b949e" />
-                                    </div>
-                                    <p className='report-meta'>
-                                        <Clock size={12} style={{ display: 'inline', marginRight: '4px' }} />
-                                        {new Date(report.createdAt).toLocaleDateString()}
-                                    </p>
-                                    <div className={`match-score ${report.matchScore >= 80 ? 'score--high' : report.matchScore >= 60 ? 'score--mid' : 'score--low'}`}>
-                                        Match Score: {report.matchScore}%
-                                    </div>
-                                </motion.div>
-                            ))}
-                        </div>
-                    </motion.section>
-                )}
-            </AnimatePresence>
+            {/* Candidate Profile */}
+            <motion.div
+              className="dashboard-card"
+              initial={{ y: 40, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ duration: 0.7, delay: 0.25 }}
+            >
+              <div className="dashboard-card__header">
+                <div className="dashboard-card__icon dashboard-card__icon--teal">
+                  <User size={20} />
+                </div>
+                <div>
+                  <h2 className="dashboard-card__title">Candidate Profile</h2>
+                  <p className="dashboard-card__sub">Your resume or quick self-summary</p>
+                </div>
+              </div>
+              <div className="dashboard-card__body">
+                <div className="dashboard-field">
+                  <label className="dashboard-field__label">
+                    <FileText size={14} /> Upload Resume{' '}
+                    <span className="dashboard-field__label-badge">Best</span>
+                  </label>
+                  <label className="dashboard-upload" htmlFor="resume">
+                    <div className="dashboard-upload__icon">
+                      <ArrowUpFromLine size={24} />
+                    </div>
+                    <p className="dashboard-upload__title">
+                      {fileName || "Choose a file or drag & drop"}
+                    </p>
+                    <p className="dashboard-upload__sub">PDF or DOCX up to 5MB</p>
+                    <input
+                      ref={resumeInputRef}
+                      hidden
+                      type="file"
+                      id="resume"
+                      accept=".pdf,.docx"
+                      onChange={handleFileChange}
+                    />
+                  </label>
+                </div>
 
-            {/* Page Footer */}
-            <footer className='page-footer'>
-                <a href='#'>Privacy Policy</a>
-                <a href='#'>Terms of Service</a>
-                <a href='#'>Documentation</a>
-                <a href='#'>Support</a>
-            </footer>
+                <div className="dashboard-divider"><span>or describe yourself</span></div>
+
+                <div className="dashboard-field">
+                  <label className="dashboard-field__label">
+                    <Target size={14} /> Quick Self-Description
+                  </label>
+                  <textarea
+                    className="dashboard-field__textarea dashboard-field__textarea--short"
+                    value={selfDescription}
+                    onChange={(e) => setSelfDescription(e.target.value)}
+                    placeholder="Briefly describe your experience, key skills, and years of expertise..."
+                  />
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        </div>
+
+        {/* ── Actions ── */}
+        <motion.div
+          className="dashboard-actions"
+          initial={{ y: 20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ delay: 0.35 }}
+        >
+          <span className="dashboard-actions__info">
+            <Clock size={14} /> Analysis takes ~30 seconds
+          </span>
+          <button
+            className="dashboard-actions__btn"
+            onClick={handleGenerateClick}
+            disabled={loading}
+          >
+            <Sparkles size={18} />
+            Analyze My Profile
+          </button>
         </motion.div>
-    )
+
+        {/* ── Recent Reports ── */}
+        <AnimatePresence mode="popLayout">
+          {reports && reports.length > 0 ? (
+            <motion.section
+              className="dashboard-reports"
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              layout
+            >
+              <div className="dashboard-reports__header">
+                <h2 className="dashboard-reports__title">Recent Reports</h2>
+                <span className="dashboard-reports__count">
+                  {reports.length} total
+                </span>
+              </div>
+              <div className="dashboard-reports__grid">
+                {reports.map((report, i) => (
+                  <motion.div
+                    key={report._id}
+                    className="dashboard-report"
+                    onClick={() => navigate(`/interview/${report._id}`)}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: i * 0.06 }}
+                    layout
+                  >
+                    <div className="dashboard-report__top">
+                      <div
+                        className={`dashboard-report__score ${
+                          report.matchScore >= 80
+                            ? 'dashboard-report__score--high'
+                            : report.matchScore >= 60
+                            ? 'dashboard-report__score--mid'
+                            : 'dashboard-report__score--low'
+                        }`}
+                      >
+                        {report.matchScore}%
+                      </div>
+                      <ChevronRight size={16} className="dashboard-report__arrow" />
+                    </div>
+                    <h3 className="dashboard-report__role">
+                      {report.title || 'Untitled'}
+                    </h3>
+                    <span className="dashboard-report__meta">
+                      <Clock size={11} />{' '}
+                      {new Date(report.createdAt).toLocaleDateString()}
+                    </span>
+                  </motion.div>
+                ))}
+              </div>
+            </motion.section>
+          ) : (
+            <motion.div
+              className="dashboard-reports"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+            >
+              <div className="dashboard-reports__header">
+                <h2 className="dashboard-reports__title">Recent Reports</h2>
+              </div>
+              <div className="dashboard-reports__empty">
+                <p>No reports yet. Analyze your first profile to get started.</p>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* ── Footer ── */}
+        <footer className="dashboard-footer">
+          <div className="dashboard-footer__inner">
+            <span className="dashboard-footer__brand">
+              &copy; {new Date().getFullYear()} ResuNova
+            </span>
+            <div className="dashboard-footer__links">
+              <a href="#" className="dashboard-footer__link">Privacy Policy</a>
+              <span className="dashboard-footer__dot">&middot;</span>
+              <a href="#" className="dashboard-footer__link">Terms of Service</a>
+              <span className="dashboard-footer__dot">&middot;</span>
+              <a href="#" className="dashboard-footer__link">Documentation</a>
+              <span className="dashboard-footer__dot">&middot;</span>
+              <a href="#" className="dashboard-footer__link">Support</a>
+            </div>
+          </div>
+        </footer>
+      </div>
+
+      {/* ── Usage Limit Upgrade Modal ── */}
+      <UpgradeToProModal
+        open={showLimitModal}
+        reason="USAGE_LIMIT"
+        usageResetAt={nextResetAt}
+        onClose={() => setShowLimitModal(false)}
+        intendedFeature="PROFILE_ANALYSIS"
+      />
+    </motion.div>
+  )
 }
 
 export default Home

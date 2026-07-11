@@ -1,13 +1,15 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { motion } from 'framer-motion'
 import { useAuth } from '../hooks/useAuth'
-import { User, Mail, Calendar, Shield, ArrowLeft, LogOut, Briefcase } from 'lucide-react'
+import { User, Mail, Calendar, Shield, ArrowLeft, LogOut, Crown, CreditCard } from 'lucide-react'
 import { useNavigate } from 'react-router'
+import { createPortalSession } from '../services/payment.api'
 import "../style/profile.scss"
 
 const Profile = () => {
     const { user, handleLogout } = useAuth()
     const navigate = useNavigate()
+    const [portalLoading, setPortalLoading] = useState(false)
 
     if (!user) return null
 
@@ -18,23 +20,36 @@ const Profile = () => {
     }) : "Recently"
 
     const initial = user.username?.charAt(0).toUpperCase() || "U"
+    const isPro = user.plan === 'pro' && user.subscriptionStatus === 'active'
+
+    const handleManageBilling = async () => {
+        setPortalLoading(true)
+        try {
+            const data = await createPortalSession()
+            if (data.url) {
+                window.location.href = data.url
+            }
+        } catch (err) {
+            console.error('Failed to open billing portal:', err)
+        } finally {
+            setPortalLoading(false)
+        }
+    }
 
     return (
-        <motion.div 
+        <motion.div
             className="profile-page"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.5 }}
         >
             <div className="profile-container">
-                {/* Back Button */}
-                <button className="back-link" onClick={() => navigate('/')}>
+                <button className="back-link" onClick={() => navigate('/dashboard')}>
                     <ArrowLeft size={18} />
                     <span>Back to Dashboard</span>
                 </button>
 
-                {/* Profile Card */}
-                <motion.div 
+                <motion.div
                     className="profile-card"
                     initial={{ y: 20, opacity: 0 }}
                     animate={{ y: 0, opacity: 1 }}
@@ -45,7 +60,9 @@ const Profile = () => {
                         <div className="user-info">
                             <h1>{user.username}</h1>
                             <p className="user-email">{user.email}</p>
-                            <div className="badge badge--pro">Premium Architect</div>
+                            <span className={`badge ${isPro ? 'badge--pro' : 'badge--starter'}`}>
+                                {isPro ? 'Pro' : 'Starter'}
+                            </span>
                         </div>
                     </div>
 
@@ -83,33 +100,32 @@ const Profile = () => {
 
                             <div className="info-item">
                                 <div className="info-item__icon">
-                                    <Shield size={20} />
+                                    {isPro ? <Crown size={20} /> : <Shield size={20} />}
                                 </div>
                                 <div className="info-item__content">
-                                    <label>Account Security</label>
-                                    <p>Standard Protection</p>
+                                    <label>Plan</label>
+                                    <p>{isPro ? 'Pro — Unlimited Reports' : 'Starter — 3 Reports / 24h'}</p>
                                 </div>
                             </div>
                         </div>
 
-                        {/* Recent Activity Suggestion (Visual Only) */}
-                        <div className="membership-section">
-                            <h3><Briefcase size={18} style={{ marginRight: '0.5rem' }} /> Deployment Stats</h3>
-                            <div className="stats-row">
-                                <div className="stat-box">
-                                    <span className="stat-box__val">Active</span>
-                                    <span className="stat-box__lbl">Status</span>
-                                </div>
-                                <div className="stat-box">
-                                    <span className="stat-box__val">∞</span>
-                                    <span className="stat-box__lbl">API Requests</span>
-                                </div>
+                        {isPro && (
+                            <div className="membership-section">
+                                <h3><CreditCard size={18} style={{ marginRight: '0.5rem' }} /> Subscription</h3>
+                                <button
+                                    className="action-btn action-btn--billing"
+                                    onClick={handleManageBilling}
+                                    disabled={portalLoading}
+                                >
+                                    <CreditCard size={18} />
+                                    <span>{portalLoading ? 'Opening...' : 'Manage Billing'}</span>
+                                </button>
                             </div>
-                        </div>
+                        )}
                     </div>
 
                     <div className="profile-card__footer">
-                        <button className="action-btn action-btn--logout" onClick={handleLogout}>
+                        <button className="action-btn action-btn--logout" onClick={() => { handleLogout(); navigate('/') }}>
                             <LogOut size={18} />
                             <span>Sign Out of Session</span>
                         </button>

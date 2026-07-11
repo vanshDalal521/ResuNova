@@ -8,33 +8,55 @@ const ai = new GoogleGenAI({
 })
 
 
-const interviewReportSchema = z.object({
-    matchScore: z.number().describe("A critical score (0-100) of how well the resume matches the JD. If the candidate is from a different domain (e.g. Frontend applying for Data Science), this score MUST be less than 20%."),
-    technicalQuestions: z.array(z.object({
-        question: z.string().describe("The technical question can be asked in the interview"),
-        intention: z.string().describe("The intention of interviewer behind asking this question"),
-        answer: z.string().describe("How to answer this question, what points to cover, what approach to take etc.")
-    })).describe("Technical questions that can be asked in the interview along with their intention and how to answer them"),
-    behavioralQuestions: z.array(z.object({
-        question: z.string().describe("The technical question can be asked in the interview"),
-        intention: z.string().describe("The intention of interviewer behind asking this question"),
-        answer: z.string().describe("How to answer this question, what points to cover, what approach to take etc.")
-    })).describe("Behavioral questions that can be asked in the interview along with their intention and how to answer them"),
-    skillGaps: z.array(z.object({
-        skill: z.string().describe("The skill which the candidate is lacking"),
-        severity: z.enum(["low", "medium", "high"]).describe("The severity of this skill gap, i.e. how important is this skill for the job and how much it can impact the candidate's chances")
-    })).describe("List of skill gaps in the candidate's profile along with their severity"),
-    preparationPlan: z.array(z.object({
-        day: z.number().describe("The day number in the preparation plan, starting from 1"),
-        focus: z.string().describe("The main focus of this day in the preparation plan, e.g. data structures, system design, mock interviews etc."),
-        tasks: z.array(z.string()).describe("List of tasks to be done on this day to follow the preparation plan, e.g. read a specific book or article, solve a set of problems, watch a video etc.")
-    })).describe("A day-wise preparation plan for the candidate to follow in order to prepare for the interview effectively"),
-    title: z.string().describe("A concise and professional title for this interview plan"),
-    atsBuzzwords: z.array(z.string()).describe("List of essential ATS keywords and buzzwords from the Job Description that the candidate should ensure are present in their resume."),
-})
+function buildInterviewReportSchema({ includeBehavioral, includePrepPlan }) {
+    const behavioralEntry = includeBehavioral ? {
+        behavioralQuestions: z.array(z.object({
+            question: z.string().describe("The behavioral question can be asked in the interview"),
+            intention: z.string().describe("The intention of interviewer behind asking this question"),
+            answer: z.string().describe("How to answer this question, what points to cover, what approach to take etc.")
+        })).describe("Behavioral questions that can be asked in the interview along with their intention and how to answer them"),
+    } : {}
 
-async function generateInterviewReport({ resume, selfDescription, jobDescription, companyName }) {
+    const prepPlanEntry = includePrepPlan ? {
+        preparationPlan: z.array(z.object({
+            day: z.number().describe("The day number in the preparation plan, starting from 1"),
+            focus: z.string().describe("The main focus of this day in the preparation plan, e.g. data structures, system design, mock interviews etc."),
+            tasks: z.array(z.string()).describe("List of tasks to be done on this day to follow the preparation plan, e.g. read a specific book or article, solve a set of problems, watch a video etc.")
+        })).describe("A day-wise preparation plan for the candidate to follow in order to prepare for the interview effectively"),
+    } : {}
+
+    return z.object({
+        matchScore: z.number().describe("A critical score (0-100) of how well the resume matches the JD. If the candidate is from a different domain (e.g. Frontend applying for Data Science), this score MUST be less than 20%."),
+        technicalQuestions: z.array(z.object({
+            question: z.string().describe("The technical question can be asked in the interview"),
+            intention: z.string().describe("The intention of interviewer behind asking this question"),
+            answer: z.string().describe("How to answer this question, what points to cover, what approach to take etc.")
+        })).describe("Technical questions that can be asked in the interview along with their intention and how to answer them"),
+        ...behavioralEntry,
+        skillGaps: z.array(z.object({
+            skill: z.string().describe("The skill which the candidate is lacking"),
+            severity: z.enum(["low", "medium", "high"]).describe("The severity of this skill gap, i.e. how important is this skill for the job and how much it can impact the candidate's chances")
+        })).describe("List of skill gaps in the candidate's profile along with their severity"),
+        ...prepPlanEntry,
+        title: z.string().describe("A concise and professional title for this interview plan"),
+        atsBuzzwords: z.array(z.string()).describe("List of essential ATS keywords and buzzwords from the Job Description that the candidate should ensure are present in their resume."),
+    })
+}
+
+async function generateInterviewReport({ resume, selfDescription, jobDescription, companyName, includeBehavioral, includePrepPlan }) {
+    const includeBehavioralQuestions = includeBehavioral !== false
+    const includePrepPlanQuestions = includePrepPlan !== false
     try {
+        const interviewReportSchema = buildInterviewReportSchema({ includeBehavioral, includePrepPlan })
+
+        const behavioralSection = includeBehavioralQuestions
+            ? `3. BEHAVIORAL QUESTIONS: Generate at least 10-12 behavioral questions tailored to leadership, cultural fit, and specific scenarios for ${companyName || "the target company"}.`
+            : ``
+
+        const prepPlanSection = includePrepPlanQuestions
+            ? `4. PREPARATION PLAN: Create a complete day-by-day 7-day preparation plan for the candidate to follow.`
+            : ``
+
         const prompt = `You are an elite, highly critical Technical Interviewer and Hiring Manager. Evaluate this candidate for the following role:
                         Target Company: ${companyName || "a Top-tier Tech Firm"}
                         Job Description: ${jobDescription}
@@ -51,9 +73,10 @@ async function generateInterviewReport({ resume, selfDescription, jobDescription
                         ANALYSIS INSTRUCTIONS:
                         1. DOMAIN VALIDATION: First, check if the candidate's core expertise aligns with the Job Description's field. If they are from a completely different domain (e.g. React/Frontend vs. ML/Data Science), DO NOT exceed 20% in the match score.
                         2. TECHNICAL QUESTIONS: Identify major gaps. Generate at least 12-15 difficult technical questions focusing on challenging those gaps and deeply related to the job role and ${companyName || "the target company"}.
-                        3. BEHAVIORAL QUESTIONS: Generate at least 10-12 behavioral questions tailored to leadership, cultural fit, and specific scenarios for ${companyName || "the target company"}.
-                        4. ATS BUZZWORDS: Extract the most crucial buzzwords and keywords from the job description to help the candidate improve their resume.
-                        5. FORMAT: Return only valid JSON following the provided schema. No markdown wrappers.
+                        ${behavioralSection}
+                        ${prepPlanSection}
+                        5. ATS BUZZWORDS: Extract the most crucial buzzwords and keywords from the job description to help the candidate improve their resume.
+                        6. FORMAT: Return only valid JSON following the provided schema. No markdown wrappers.
     `
 
         console.log("Calling Gemini API with model: models/gemini-2.5-flash");

@@ -13,25 +13,24 @@
     gap: 0.6rem;
 
     &.primary-button {
-        background: linear-gradient(135deg, var(--p), var(--s));
-        color: white;
-        box-shadow: 0 10px 20px -5px rgba(99, 102, 241, 0.4);
+        background: linear-gradient(135deg, #0d0d2b, #222255, #0d0d2b);
+        color: var(--txt-inverse);
+        box-shadow: 0 10px 20px -5px rgba(45, 45, 90, 0.25);
 
         &:hover {
             transform: translateY(-2px);
-            box-shadow: 0 15px 30px -8px rgba(99, 102, 241, 0.5);
-            filter: brightness(1.1);
+            box-shadow: 0 15px 30px -8px rgba(45, 45, 90, 0.3);
         }
     }
 
     &.secondary-button {
-        background: rgba(255, 255, 255, 0.05);
-        color: white;
-        border: 1px solid var(--glass-border);
+        background: var(--glass);
+        color: var(--txt);
+        border: 1px solid var(--border);
 
         &:hover {
-            background: rgba(255, 255, 255, 0.08);
-            border-color: rgba(255, 255, 255, 0.2);
+            background: var(--glass-high);
+            border-color: var(--border-strong);
         }
     }
 

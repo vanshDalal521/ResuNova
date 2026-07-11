@@ -1,0 +1,82 @@
+.navbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.6rem 2rem;
+  background: rgba(237, 240, 255, 0.85);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border-bottom: 1px solid rgba(167, 183, 231, .12);
+
+  &__left {
+    display: flex;
+    align-items: center;
+  }
+
+  &__logo-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    transition: opacity 0.2s;
+
+    &:hover {
+      opacity: 0.85;
+    }
+  }
+
+  &__right {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+  }
+
+  &__link {
+    background: none;
+    border: none;
+    color: var(--txt-muted);
+    font-family: 'Outfit', sans-serif;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 0.5rem 1rem;
+    border-radius: 0.75rem;
+    transition: all 0.25s;
+
+    &:hover {
+      color: var(--txt);
+      background: rgba(167, 183, 231, 0.12);
+    }
+
+    &--active {
+      color: var(--txt);
+      background: rgba(167, 183, 231, 0.15);
+    }
+  }
+}
+
+.brand-logo {
+  user-select: none;
+
+  &__text {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 1.25rem;
+    font-weight: 800;
+    color: var(--txt);
+    letter-spacing: -0.02em;
+  }
+
+  &__accent {
+    background: linear-gradient(135deg, #4a5aad, #3d4d9a);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+}

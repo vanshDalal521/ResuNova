@@ -2,24 +2,58 @@ const userModel = require("../models/user.model")
 const bcrypt = require("bcryptjs")
 const jwt = require("jsonwebtoken")
 const tokenBlacklistModel = require("../models/blacklist.model")
+const { z } = require("zod")
+
+// Zod schemas for input validation
+const registerSchema = z.object({
+    username: z
+        .string()
+        .trim()
+        .min(3, "Username must be at least 3 characters")
+        .max(30, "Username must be at most 30 characters")
+        .regex(/^[a-zA-Z0-9_]+$/, "Username can only contain letters, numbers, and underscores"),
+    email: z
+        .string()
+        .trim()
+        .email("Invalid email address")
+        .max(100, "Email is too long"),
+    password: z
+        .string()
+        .min(8, "Password must be at least 8 characters")
+        .max(128, "Password is too long")
+        .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
+        .regex(/[a-z]/, "Password must contain at least one lowercase letter")
+        .regex(/[0-9]/, "Password must contain at least one number"),
+})
+
+const loginSchema = z.object({
+    email: z.string().trim().min(1, "Email or username is required"),
+    password: z.string().min(1, "Password is required"),
+})
+
+const COOKIE_OPTIONS = {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    maxAge: 24 * 60 * 60 * 1000,
+}
 
 /**
  * @name registerUserController
- * @description register a new user, expects username, email and password in the request body
+ * @description register a new user
  * @access Public
  */
 async function registerUserController(req, res) {
-
-    const { username, email, password } = req.body
-
-    if (!username || !email || !password) {
-        return res.status(400).json({
-            message: "Please provide username, email and password"
-        })
+    const parsed = registerSchema.safeParse(req.body)
+    if (!parsed.success) {
+        const firstError = parsed.error.errors[0]
+        return res.status(400).json({ message: firstError.message })
     }
 
+    const { username, email, password } = parsed.data
+
     const isUserAlreadyExists = await userModel.findOne({
-        $or: [ { username }, { email } ]
+        $or: [{ username }, { email }]
     })
 
     if (isUserAlreadyExists) {
@@ -28,11 +62,11 @@ async function registerUserController(req, res) {
         })
     }
 
-    const hash = await bcrypt.hash(password, 10)
+    const hash = await bcrypt.hash(password, 12)
 
     const user = await userModel.create({
         username,
-        email,
+        email: email.toLowerCase(),
         password: hash
     })
 
@@ -42,12 +76,13 @@ async function registerUserController(req, res) {
         { expiresIn: "1d" }
     )
 
-    res.cookie("token", token, {
-        httpOnly: true,
-        secure: false, // Set to true if using HTTPS
-        sameSite: "lax",
-    })
+    res.cookie("token", token, COOKIE_OPTIONS)
 
+    const { getFreeUsageStatus } = require("../services/entitlement.service")
+    let entitlements = null
+    try {
+        entitlements = await getFreeUsageStatus(user._id)
+    } catch { }
 
     res.status(201).json({
         message: "User registered successfully",
@@ -55,36 +90,43 @@ async function registerUserController(req, res) {
             id: user._id,
             username: user.username,
             email: user.email,
+            plan: user.plan,
+            reportsUsedThisMonth: user.reportsUsedThisMonth,
             createdAt: user.createdAt
-        }
+        },
+        entitlements,
     })
-
 }
-
 
 /**
  * @name loginUserController
- * @description login a user, expects email and password in the request body
+ * @description login a user with email and password
  * @access Public
  */
 async function loginUserController(req, res) {
+    const parsed = loginSchema.safeParse(req.body)
+    if (!parsed.success) {
+        const firstError = parsed.error.errors[0]
+        return res.status(400).json({ message: "Invalid email or password" })
+    }
 
-    const { email, password } = req.body
+    const { email, password } = parsed.data
 
-    const user = await userModel.findOne({ email })
+    const user = await userModel.findOne({
+        $or: [
+            { email: email.toLowerCase() },
+            { username: email }
+        ]
+    })
 
     if (!user) {
-        return res.status(400).json({
-            message: "Invalid email or password"
-        })
+        return res.status(400).json({ message: "Invalid email or password" })
     }
 
     const isPasswordValid = await bcrypt.compare(password, user.password)
 
     if (!isPasswordValid) {
-        return res.status(400).json({
-            message: "Invalid email or password"
-        })
+        return res.status(400).json({ message: "Invalid email or password" })
     }
 
     const token = jwt.sign(
@@ -93,22 +135,27 @@ async function loginUserController(req, res) {
         { expiresIn: "1d" }
     )
 
-    res.cookie("token", token, {
-        httpOnly: true,
-        secure: false, // Set to true if using HTTPS
-        sameSite: "lax",
-    })
+    res.cookie("token", token, COOKIE_OPTIONS)
+
+    const { getFreeUsageStatus } = require("../services/entitlement.service")
+    let entitlements = null
+    try {
+        entitlements = await getFreeUsageStatus(user._id)
+    } catch { }
+
     res.status(200).json({
         message: "User loggedIn successfully.",
         user: {
             id: user._id,
             username: user.username,
             email: user.email,
+            plan: user.plan,
+            reportsUsedThisMonth: user.reportsUsedThisMonth,
             createdAt: user.createdAt
-        }
+        },
+        entitlements,
     })
 }
-
 
 /**
  * @name logoutUserController
@@ -119,14 +166,20 @@ async function logoutUserController(req, res) {
     const token = req.cookies.token
 
     if (token) {
-        await tokenBlacklistModel.create({ token })
+        try {
+            await tokenBlacklistModel.create({ token })
+        } catch {
+            // ignore duplicate blacklist entries
+        }
     }
 
-    res.clearCookie("token")
-
-    res.status(200).json({
-        message: "User logged out successfully"
+    res.clearCookie("token", {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
     })
+
+    res.status(200).json({ message: "User logged out successfully" })
 }
 
 /**
@@ -135,14 +188,17 @@ async function logoutUserController(req, res) {
  * @access private
  */
 async function getMeController(req, res) {
-
-    const user = await userModel.findById(req.user.id)
+    const user = await userModel.findById(req.user.id).select("-password")
 
     if (!user) {
-        return res.status(401).json({
-            message: "User not found"
-        })
+        return res.status(401).json({ message: "User not found" })
     }
+
+    const { getFreeUsageStatus } = require("../services/entitlement.service")
+    let entitlements = null
+    try {
+        entitlements = await getFreeUsageStatus(req.user.id)
+    } catch { }
 
     res.status(200).json({
         message: "User details fetched successfully",
@@ -150,13 +206,14 @@ async function getMeController(req, res) {
             id: user._id,
             username: user.username,
             email: user.email,
-            createdAt: user.createdAt
-        }
+            plan: user.plan,
+            subscriptionStatus: user.subscriptionStatus,
+            reportsUsedThisMonth: user.reportsUsedThisMonth,
+            createdAt: user.createdAt,
+        },
+        entitlements,
     })
-
 }
-
-
 
 module.exports = {
     registerUserController,

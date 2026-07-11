@@ -71,6 +71,7 @@ const ProfileMenu = () => {
                             onClick={() => {
                                 handleLogout()
                                 setIsOpen(false)
+                                navigate('/')
                             }}
                         >
                             <LogOut size={16} />

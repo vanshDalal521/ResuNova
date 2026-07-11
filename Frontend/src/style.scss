@@ -1,24 +1,53 @@
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Plus+Jakarta+Sans:wght@400;700;800&display=swap');
 
 :root {
-    /* Premium Palette */
-    --p: #6366f1;         /* Indigo */
-    --s: #c084fc;         /* Violet */
-    --a: #2dd4bf;         /* Teal */
-    --bg: #030712;        /* Darkest Navy */
-    
+    /* Twilight Haze — Primary Periwinkle */
+    --p: #8A9AD4;
+    --s: #C5D0F0;
+    --a: #A7B7E7;
+    --bg: #EDF0FF;
+
+    /* Twilight Haze — Extended Palette */
+    --accent: #4a5aad;
+    --accent-light: #8A9AD4;
+    --accent-deep: #2a3a8a;
+    --accent-muted: rgba(167, 183, 231, .15);
+    --secondary: #3d4d9a;
+    --secondary-light: #6B7ABF;
+    --teal: #A7B7E7;
+    --teal-dark: #8A9AD4;
+
+    /* Background Hierarchy */
+    --bg-elevated: #F5F7FF;
+    --bg-card: rgba(167, 183, 231, .04);
+    --bg-card-hover: rgba(167, 183, 231, .07);
+
     /* Semantic Colors */
-    --card: rgba(17, 24, 39, 0.45);
-    --border: rgba(255, 255, 255, 0.08);
-    --txt: #f9fafb;
-    --txt-muted: #9ca3af;
-    
-    /* Apple Glass System */
-    --glass: rgba(255, 255, 255, 0.03);
-    --glass-high: rgba(255, 255, 255, 0.06);
-    --glass-border: rgba(255, 255, 255, 0.12);
-    --glass-inner-glow: rgba(255, 255, 255, 0.05);
-    
+    --card: rgba(255, 255, 255, 0.55);
+    --border: rgba(167, 183, 231, .15);
+    --border-strong: rgba(167, 183, 231, .18);
+    --txt: #0d0d2b;
+    --txt-muted: #222255;
+    --txt-dim: #3d3d70;
+    --txt-inverse: #EDF0FF;
+
+    /* Apple Glass System — Twilight Haze */
+    --glass: rgba(167, 183, 231, .06);
+    --glass-high: rgba(167, 183, 231, .12);
+    --glass-border: rgba(167, 183, 231, .2);
+    --glass-inner-glow: rgba(255, 255, 255, .3);
+
+    /* Gradients */
+    --grad-primary: linear-gradient(135deg, #A7B7E7 0%, #D8E2FF 50%, #C5D0F0 100%);
+    --grad-secondary: linear-gradient(135deg, #A7B7E7 0%, #D8E2FF 100%);
+
+    /* Shadows — Twilight Haze (soft navy base) */
+    --shadow-sm: 0 2px 8px -2px rgba(45, 45, 90, .06);
+    --shadow-md: 0 8px 24px -6px rgba(45, 45, 90, .08);
+    --shadow-lg: 0 20px 48px -12px rgba(45, 45, 90, .1);
+    --shadow-xl: 0 32px 64px -16px rgba(45, 45, 90, .12);
+    --shadow-accent: 0 20px 48px -16px rgba(167, 183, 231, .18);
+
     /* Eye Relaxing Geometry */
     --radius-xl: 32px;
     --radius-lg: 24px;
@@ -47,7 +76,7 @@ body {
     z-index: 1;
 }
 
-/* Liquid Glass Background Elements */
+/* Liquid Glass Background — Twilight Haze Light */
 .liquid-bg {
     position: fixed;
     top: 0;
@@ -56,7 +85,7 @@ body {
     height: 100vh;
     z-index: -1;
     overflow: hidden;
-    background: radial-gradient(circle at 50% 50%, #111827, #030712);
+    background: radial-gradient(circle at 50% 50%, #E8ECFF, #EDF0FF);
 }
 
 .orb {
@@ -65,12 +94,11 @@ body {
     border-radius: 50%;
     opacity: 0.5;
     animation: float 25s infinite alternate ease-in-out;
-    mix-blend-mode: screen;
 }
 
-.orb-1 { width: 600px; height: 600px; background: radial-gradient(circle, var(--p), transparent); top: -200px; right: -100px; animation-delay: 0s; }
-.orb-2 { width: 800px; height: 800px; background: radial-gradient(circle, var(--s), transparent); bottom: -300px; left: -200px; animation-delay: -7s; }
-.orb-3 { width: 500px; height: 500px; background: radial-gradient(circle, var(--a), transparent); top: 20%; left: 30%; opacity: 0.3; animation-delay: -12s; }
+.orb-1 { width: 600px; height: 600px; background: radial-gradient(circle, rgba(167, 183, 231, .08), transparent); top: -200px; right: -100px; animation-delay: 0s; }
+.orb-2 { width: 800px; height: 800px; background: radial-gradient(circle, rgba(216, 226, 255, .06), transparent); bottom: -300px; left: -200px; animation-delay: -7s; }
+.orb-3 { width: 500px; height: 500px; background: radial-gradient(circle, rgba(167, 183, 231, .04), transparent); top: 20%; left: 30%; opacity: 0.3; animation-delay: -12s; }
 
 @keyframes float {
     0% { transform: translate(0, 0) scale(1); }
@@ -84,21 +112,89 @@ h1, h2, h3 {
 }
 
 .highlight {
-    background: linear-gradient(135deg, var(--p), var(--s));
+    background: linear-gradient(135deg, var(--accent), var(--secondary));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
 }
 
-/* Glassmorphism Utilities */
+/* Glassmorphism Utilities — Twilight Haze */
+/* Payment Status Pages */
+.payment-status-page {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    background: var(--bg);
+}
+
+.payment-status-card {
+    background: var(--card);
+    backdrop-filter: blur(40px) saturate(180%);
+    -webkit-backdrop-filter: blur(40px) saturate(180%);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-xl);
+    padding: 3rem;
+    max-width: 480px;
+    width: 100%;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+
+    &__icon {
+        color: #4a7c6f;
+        margin-bottom: 0.5rem;
+
+        &--cancel {
+            color: #c44;
+        }
+    }
+
+    h1 {
+        font-size: 1.8rem;
+        color: var(--txt);
+    }
+
+    p {
+        color: var(--txt-muted);
+        font-size: 0.95rem;
+        line-height: 1.6;
+        max-width: 360px;
+    }
+
+    &__btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-top: 0.5rem;
+        padding: 0.75rem 1.5rem;
+        border: none;
+        border-radius: var(--radius-md);
+        font-size: 0.9rem;
+        font-weight: 700;
+        font-family: 'Outfit', sans-serif;
+        background: linear-gradient(135deg, #0d0d2b, #222255, #0d0d2b);
+        color: var(--txt-inverse);
+        cursor: pointer;
+        transition: all 0.3s;
+
+        &:hover {
+            box-shadow: 0 6px 20px -4px rgba(138, 154, 212, .3);
+            transform: translateY(-2px);
+        }
+    }
+}
+
 .glass-card {
     background: var(--card);
     backdrop-filter: blur(40px) saturate(180%);
     -webkit-backdrop-filter: blur(40px) saturate(180%);
     border: 1px solid var(--glass-border);
     border-radius: var(--radius-xl);
-    box-shadow: 
-        0 25px 50px -12px rgba(0, 0, 0, 0.5),
-        inset 0 0 0 1px var(--glass-inner-glow);
+    box-shadow: var(--shadow-lg);
     position: relative;
     overflow: hidden;
 }

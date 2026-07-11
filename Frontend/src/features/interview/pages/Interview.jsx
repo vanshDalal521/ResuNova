@@ -3,6 +3,7 @@ import '../style/interview.scss'
 import { useInterview } from '../hooks/useInterview.js'
 import { useNavigate, useParams } from 'react-router'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useSmoothContainerScroll } from '../hooks/useSmoothContainerScroll'
 import {
     Code,
     MessageSquare,
@@ -17,9 +18,13 @@ import {
     Zap,
     Clock,
     BookOpen,
+    Crown,
+    Lock,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
-import ProfileMenu from '../../auth/components/ProfileMenu'
+import Navbar from '../../../components/Navbar'
+import UpgradeToProModal from '../../../components/UpgradeToProModal'
+import { useEntitlements } from '../../auth/hooks/useEntitlements'
 
 // ── Animated SVG Score Ring ────────────────────────────────────────────────────
 const ScoreRing = ({ score }) => {
@@ -110,6 +115,38 @@ const QuestionCard = ({ item, index }) => {
     )
 }
 
+// ── Locked Tab Placeholder ─────────────────────────────────────────────────────
+const LockedTabContent = ({ feature, onUpgradeClick, onSecondary }) => {
+    const titles = {
+        BEHAVIORAL_QUESTIONS: "Behavioral Questions",
+        SEVEN_DAY_PLAN: "7-Day Preparation Plan",
+    }
+    const descriptions = {
+        BEHAVIORAL_QUESTIONS: "Upgrade to Pro to unlock behavioral interview questions with STAR answer frameworks.",
+        SEVEN_DAY_PLAN: "Upgrade to Pro to get your personalized day-by-day interview preparation roadmap.",
+    }
+
+    return (
+        <motion.div
+            className="locked-content"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+        >
+            <div className="locked-content__icon">
+                <Crown size={32} />
+            </div>
+            <h3 className="locked-content__title">{titles[feature] || "Pro Feature"}</h3>
+            <p className="locked-content__desc">{descriptions[feature]}</p>
+            <button className="locked-content__cta" onClick={onUpgradeClick}>
+                <Crown size={16} />
+                Upgrade to Pro
+            </button>
+        </motion.div>
+    )
+}
+
 // ── Roadmap Day (Timeline) ─────────────────────────────────────────────────────
 const RoadMapDay = ({ day, index }) => (
     <motion.div
@@ -118,14 +155,12 @@ const RoadMapDay = ({ day, index }) => (
         animate={{ opacity: 1, x: 0 }}
         transition={{ delay: index * 0.08, duration: 0.4 }}
     >
-        {/* Timeline node */}
         <div className="roadmap-day__node">
             <div className="roadmap-day__bullet">
                 {day.day}
             </div>
         </div>
 
-        {/* Card */}
         <div className="roadmap-day__card">
             <div className="roadmap-day__header">
                 <span className="roadmap-day__badge">Day {day.day}</span>
@@ -147,9 +182,9 @@ const RoadMapDay = ({ day, index }) => (
 
 // ── Nav Config ─────────────────────────────────────────────────────────────────
 const NAV_ITEMS = [
-    { id: 'technical',  label: 'Technical',  subLabel: 'Precision Analysis', icon: <Code size={16} /> },
-    { id: 'behavioral', label: 'Behavioral', subLabel: 'Impact Framework',   icon: <MessageSquare size={16} /> },
-    { id: 'roadmap',    label: 'Roadmap',    subLabel: 'Readiness Pathway',  icon: <Map size={16} /> },
+    { id: 'technical',  label: 'Technical',  subLabel: 'Precision Analysis', icon: <Code size={16} />, pro: false },
+    { id: 'behavioral', label: 'Behavioral', subLabel: 'Impact Framework',   icon: <MessageSquare size={16} />, pro: true },
+    { id: 'roadmap',    label: 'Roadmap',    subLabel: 'Readiness Pathway',  icon: <Map size={16} />, pro: true },
 ]
 
 // ── Main Component ─────────────────────────────────────────────────────────────
@@ -158,9 +193,52 @@ const Interview = () => {
     const { report, getReportById, loading, getResumePdf } = useInterview()
     const { interviewId } = useParams()
     const navigate = useNavigate()
+    const { canViewBehavioralQuestions, canViewSevenDayPlan, refreshEntitlements } = useEntitlements()
+
+    // Modal state
+    const [modalReason, setModalReason] = useState(null)
+    const [modalOpen, setModalOpen] = useState(false)
+
     useEffect(() => {
         if (interviewId) getReportById(interviewId)
     }, [interviewId])
+
+    // Smooth Lenis scroll for inner containers
+    useSmoothContainerScroll('.content-body-scroll, .interview-sidebar, .interview-nav')
+
+    // Determine which features are locked
+    const isLocked = {
+        behavioral: !canViewBehavioralQuestions,
+        roadmap: !canViewSevenDayPlan,
+    }
+
+    const handleNavClick = (id) => {
+        if (id === 'behavioral' && isLocked.behavioral) {
+            setModalReason("BEHAVIORAL_QUESTIONS")
+            setModalOpen(true)
+            return
+        }
+        if (id === 'roadmap' && isLocked.roadmap) {
+            setModalReason("SEVEN_DAY_PLAN")
+            setModalOpen(true)
+            return
+        }
+        setActiveNav(id)
+    }
+
+    const handleModalClose = () => {
+        setModalOpen(false)
+        setModalReason(null)
+        refreshEntitlements()
+    }
+
+    const handleSecondary = () => {
+        if (modalReason === "BEHAVIORAL_QUESTIONS") {
+            setActiveNav('technical')
+        }
+        setModalOpen(false)
+        setModalReason(null)
+    }
 
     const handleDownload = async () => {
         const promise = getResumePdf(interviewId)
@@ -189,7 +267,7 @@ const Interview = () => {
                 <AlertCircle size={52} color="#f87171" />
                 <h1>Report Not Found</h1>
                 <p>We couldn't load the requested interview plan.</p>
-                <button className="back-btn" onClick={() => navigate('/')} style={{ marginTop: '1rem', width: 'auto' }}>
+                <button className="back-btn" onClick={() => navigate('/dashboard')} style={{ marginTop: '1rem', width: 'auto' }}>
                     <ArrowLeft size={16} /> Back to Dashboard
                 </button>
             </main>
@@ -220,33 +298,44 @@ const Interview = () => {
             animate={{ opacity: 1 }}
             transition={{ duration: 0.5 }}
         >
-            <div className="interview-layout">
+            <Navbar />
+            <div className="interview-layout" data-lenis-prevent>
 
                 {/* ── Left Sidebar Navigation ──────────────────────────── */}
                 <nav className="interview-nav">
                     <div className="nav-header">
-                        <button className="back-btn" onClick={() => navigate('/')}>
+                        <button className="back-btn" onClick={() => navigate('/dashboard')}>
                             <ArrowLeft size={15} />
                             Dashboard
                         </button>
-                        <div style={{ marginTop: '1.25rem' }}>
-                            <ProfileMenu />
-                        </div>
                     </div>
 
                     <div className="nav-content">
                         <p className="interview-nav__section-label">Report Sections</p>
-                        {NAV_ITEMS.map(item => (
-                            <button
-                                key={item.id}
-                                className={`interview-nav__item ${activeNav === item.id ? 'interview-nav__item--active' : ''}`}
-                                onClick={() => setActiveNav(item.id)}
-                            >
-                                <span className="nav-icon">{item.icon}</span>
-                                <span className="interview-nav__text">{item.label}</span>
-                                <span className="nav-count">{NAV_COUNTS[item.id]}</span>
-                            </button>
-                        ))}
+                        {NAV_ITEMS.map(item => {
+                            const locked = item.id === 'behavioral' ? isLocked.behavioral : item.id === 'roadmap' ? isLocked.roadmap : false
+                            return (
+                                <button
+                                    key={item.id}
+                                    className={`interview-nav__item ${activeNav === item.id ? 'interview-nav__item--active' : ''} ${locked ? 'interview-nav__item--locked' : ''}`}
+                                    onClick={() => handleNavClick(item.id)}
+                                    title={locked ? `Upgrade to Pro to unlock ${item.label}` : item.label}
+                                    aria-label={`${item.label}${locked ? ' (Pro feature, locked)' : ''}`}
+                                >
+                                    <span className="nav-icon">{item.icon}</span>
+                                    <span className="interview-nav__text">{item.label}</span>
+                                    {item.pro && (
+                                        <span className="nav-pro-badge">PRO</span>
+                                    )}
+                                    {locked && (
+                                        <span className="nav-lock-icon"><Lock size={11} /></span>
+                                    )}
+                                    {!locked && (
+                                        <span className="nav-count">{NAV_COUNTS[item.id]}</span>
+                                    )}
+                                </button>
+                            )
+                        })}
                     </div>
 
                     <div className="nav-footer">
@@ -303,12 +392,16 @@ const Interview = () => {
                                     exit={{ opacity: 0 }}
                                     transition={{ duration: 0.2 }}
                                 >
-                                    {report.technicalQuestions.map((q, i) => (
-                                        <QuestionCard key={i} item={q} index={i} />
-                                    ))}
+                                    {report.technicalQuestions?.length > 0 ? (
+                                        report.technicalQuestions.map((q, i) => (
+                                            <QuestionCard key={i} item={q} index={i} />
+                                        ))
+                                    ) : (
+                                        <p className="q-list__empty">No technical questions available.</p>
+                                    )}
                                 </motion.div>
                             )}
-                            {activeNav === 'behavioral' && (
+                            {activeNav === 'behavioral' && !isLocked.behavioral && (
                                 <motion.div
                                     key="behavioral"
                                     className="q-list"
@@ -317,12 +410,26 @@ const Interview = () => {
                                     exit={{ opacity: 0 }}
                                     transition={{ duration: 0.2 }}
                                 >
-                                    {report.behavioralQuestions.map((q, i) => (
-                                        <QuestionCard key={i} item={q} index={i} />
-                                    ))}
+                                    {report.behavioralQuestions?.length > 0 ? (
+                                        report.behavioralQuestions.map((q, i) => (
+                                            <QuestionCard key={i} item={q} index={i} />
+                                        ))
+                                    ) : (
+                                        <p className="q-list__empty">No behavioral questions available.</p>
+                                    )}
                                 </motion.div>
                             )}
-                            {activeNav === 'roadmap' && (
+                            {activeNav === 'behavioral' && isLocked.behavioral && (
+                                <LockedTabContent
+                                    feature="BEHAVIORAL_QUESTIONS"
+                                    onUpgradeClick={() => {
+                                        setModalReason("BEHAVIORAL_QUESTIONS")
+                                        setModalOpen(true)
+                                    }}
+                                    onSecondary={() => setActiveNav('technical')}
+                                />
+                            )}
+                            {activeNav === 'roadmap' && !isLocked.roadmap && (
                                 <motion.div
                                     key="roadmap"
                                     className="roadmap-list"
@@ -331,10 +438,24 @@ const Interview = () => {
                                     exit={{ opacity: 0 }}
                                     transition={{ duration: 0.2 }}
                                 >
-                                    {report.preparationPlan.map((day, i) => (
-                                        <RoadMapDay key={day.day} day={day} index={i} />
-                                    ))}
+                                    {report.preparationPlan?.length > 0 ? (
+                                        report.preparationPlan.map((day, i) => (
+                                            <RoadMapDay key={day.day} day={day} index={i} />
+                                        ))
+                                    ) : (
+                                        <p className="q-list__empty">No preparation plan available.</p>
+                                    )}
                                 </motion.div>
+                            )}
+                            {activeNav === 'roadmap' && isLocked.roadmap && (
+                                <LockedTabContent
+                                    feature="SEVEN_DAY_PLAN"
+                                    onUpgradeClick={() => {
+                                        setModalReason("SEVEN_DAY_PLAN")
+                                        setModalOpen(true)
+                                    }}
+                                    onSecondary={() => setActiveNav('technical')}
+                                />
                             )}
                         </AnimatePresence>
                     </div>
@@ -342,7 +463,6 @@ const Interview = () => {
 
                 {/* ── Right Sidebar ────────────────────────────────────── */}
                 <aside className="interview-sidebar">
-
                     {/* Match Score */}
                     <div className="sidebar-section">
                         <p className="sidebar-label">Strategic Alignment</p>
@@ -378,21 +498,25 @@ const Interview = () => {
                     <div className="sidebar-section">
                         <p className="sidebar-label">Bridgeable Skill Gaps</p>
                         <div className="skill-gaps__list">
-                            {report.skillGaps.map((gap, i) => (
-                                <motion.div
-                                    key={i}
-                                    className={`skill-tag skill-tag--${gap.severity}`}
-                                    initial={{ opacity: 0, x: 20 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    transition={{ delay: 0.25 + i * 0.07 }}
-                                >
-                                    <div className="skill-name">
-                                        {gap.severity === 'high' && <AlertCircle size={13} />}
-                                        <span>{gap.skill}</span>
-                                    </div>
-                                    <span className="severity-badge">{gap.severity}</span>
-                                </motion.div>
-                            ))}
+                            {report.skillGaps?.length > 0 ? (
+                                report.skillGaps.map((gap, i) => (
+                                    <motion.div
+                                        key={i}
+                                        className={`skill-tag skill-tag--${gap.severity}`}
+                                        initial={{ opacity: 0, x: 20 }}
+                                        animate={{ opacity: 1, x: 0 }}
+                                        transition={{ delay: 0.25 + i * 0.07 }}
+                                    >
+                                        <div className="skill-name">
+                                            {gap.severity === 'high' && <AlertCircle size={13} />}
+                                            <span>{gap.skill}</span>
+                                        </div>
+                                        <span className="severity-badge">{gap.severity}</span>
+                                    </motion.div>
+                                ))
+                            ) : (
+                                <p style={{ fontSize: '0.82rem', color: 'var(--txt-dim)' }}>No skill gaps identified.</p>
+                            )}
                         </div>
                     </div>
 
@@ -400,14 +524,22 @@ const Interview = () => {
                     {report.title && (
                         <div className="sidebar-section">
                             <p className="sidebar-label">Report Title</p>
-                            <p style={{ fontSize: '0.9rem', color: 'rgba(255,255,255,0.75)', lineHeight: 1.6, fontWeight: 600 }}>
+                            <p style={{ fontSize: '0.9rem', color: 'var(--txt)', lineHeight: 1.6, fontWeight: 600 }}>
                                 {report.title}
                             </p>
                         </div>
                     )}
                 </aside>
-
             </div>
+
+            {/* ── Contextual Upgrade Modal ── */}
+            <UpgradeToProModal
+                open={modalOpen}
+                reason={modalReason || "USAGE_LIMIT"}
+                onClose={handleModalClose}
+                onSecondary={handleSecondary}
+                intendedFeature={modalReason}
+            />
         </motion.div>
     )
 }

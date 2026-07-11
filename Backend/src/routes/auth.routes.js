@@ -1,39 +1,22 @@
 const { Router } = require('express')
+const rateLimit = require('express-rate-limit')
 const authController = require("../controllers/auth.controller")
 const authMiddleware = require("../middlewares/auth.middleware")
 
 const authRouter = Router()
 
-/**
- * @route POST /api/auth/register
- * @description Register a new user
- * @access Public
- */
-authRouter.post("/register", authController.registerUserController)
+// Rate limit login/register — higher in dev for testing
+const authLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: process.env.NODE_ENV === "production" ? 10 : 50,
+    message: { success: false, message: "Too many attempts. Please try again in 15 minutes." },
+    standardHeaders: true,
+    legacyHeaders: false,
+})
 
-
-/**
- * @route POST /api/auth/login
- * @description login user with email and password
- * @access Public
- */
-authRouter.post("/login", authController.loginUserController)
-
-
-/**
- * @route GET /api/auth/logout
- * @description clear token from user cookie and add the token in blacklist
- * @access public
- */
+authRouter.post("/register", authLimiter, authController.registerUserController)
+authRouter.post("/login", authLimiter, authController.loginUserController)
 authRouter.get("/logout", authController.logoutUserController)
-
-
-/**
- * @route GET /api/auth/get-me
- * @description get the current logged in user details
- * @access private
- */
 authRouter.get("/get-me", authMiddleware.authUser, authController.getMeController)
-
 
 module.exports = authRouter
