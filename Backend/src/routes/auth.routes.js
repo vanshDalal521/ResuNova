@@ -17,6 +17,6 @@ const authLimiter = rateLimit({
 authRouter.post("/register", authLimiter, authController.registerUserController)
 authRouter.post("/login", authLimiter, authController.loginUserController)
 authRouter.get("/logout", authController.logoutUserController)
-authRouter.get("/get-me", authMiddleware.authUser, authController.getMeController)
+authRouter.get("/get-me", authController.getMeController)
 
 module.exports = authRouter

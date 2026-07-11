@@ -20,8 +20,11 @@ export const AuthProvider = ({ children }) => {
                     if (data.entitlements) {
                         setEntitlements(data.entitlements)
                     }
+                } else {
+                    setUser(null)
+                    setEntitlements(null)
                 }
-            } catch (err) {
+            } catch {
                 setUser(null)
                 setEntitlements(null)
             } finally {

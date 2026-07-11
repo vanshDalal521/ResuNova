@@ -199,16 +199,32 @@ async function logoutUserController(req, res) {
  */
 async function getMeController(req, res, next) {
     try {
-        const user = await userModel.findById(req.user.id).select("-password")
+        const token = req.cookies.token
+        if (!token) {
+            return res.status(200).json({ user: null, entitlements: null })
+        }
 
+        const blacklisted = await tokenBlacklistModel.findOne({ token })
+        if (blacklisted) {
+            return res.status(200).json({ user: null, entitlements: null })
+        }
+
+        let decoded
+        try {
+            decoded = jwt.verify(token, process.env.JWT_SECRET)
+        } catch {
+            return res.status(200).json({ user: null, entitlements: null })
+        }
+
+        const user = await userModel.findById(decoded.id).select("-password")
         if (!user) {
-            return res.status(401).json({ message: "User not found" })
+            return res.status(200).json({ user: null, entitlements: null })
         }
 
         const { getFreeUsageStatus } = require("../services/entitlement.service")
         let entitlements = null
         try {
-            entitlements = await getFreeUsageStatus(req.user.id)
+            entitlements = await getFreeUsageStatus(user._id)
         } catch { }
 
         res.status(200).json({

@@ -25,7 +25,6 @@ export const useAuth = () => {
                 return true
             }
         } catch (err) {
-            console.error("Login Error:", err)
             setUser(null)
             setEntitlements(null)
             throw new Error(err.response?.data?.message || "Invalid email or password")
@@ -47,7 +46,6 @@ export const useAuth = () => {
                 return true
             }
         } catch (err) {
-            console.error("Registration Error:", err)
             setUser(null)
             setEntitlements(null)
             throw new Error(err.response?.data?.message || "Registration failed")
@@ -63,8 +61,7 @@ export const useAuth = () => {
             await logout()
             setUser(null)
             setEntitlements(null)
-        } catch (err) {
-            console.error("Logout Error:", err)
+        } catch {
         } finally {
             setLoading(false)
         }

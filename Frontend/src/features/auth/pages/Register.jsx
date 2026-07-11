@@ -59,7 +59,16 @@ const Register = () => {
             return toast.error('Please fill in all fields')
         }
         if (password.length < 8) {
-            return toast.error('Password must be at least 8 characters with uppercase, lowercase, and a number')
+            return toast.error('Password must be at least 8 characters')
+        }
+        if (!/[A-Z]/.test(password)) {
+            return toast.error('Password must contain at least one uppercase letter')
+        }
+        if (!/[a-z]/.test(password)) {
+            return toast.error('Password must contain at least one lowercase letter')
+        }
+        if (!/[0-9]/.test(password)) {
+            return toast.error('Password must contain at least one number')
         }
 
         try {
