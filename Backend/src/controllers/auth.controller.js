@@ -43,59 +43,64 @@ const COOKIE_OPTIONS = {
  * @description register a new user
  * @access Public
  */
-async function registerUserController(req, res) {
-    const parsed = registerSchema.safeParse(req.body)
-    if (!parsed.success) {
-        const firstError = parsed.error.errors[0]
-        return res.status(400).json({ message: firstError.message })
-    }
-
-    const { username, email, password } = parsed.data
-
-    const isUserAlreadyExists = await userModel.findOne({
-        $or: [{ username }, { email }]
-    })
-
-    if (isUserAlreadyExists) {
-        return res.status(400).json({
-            message: "Account already exists with this email address or username"
-        })
-    }
-
-    const hash = await bcrypt.hash(password, 12)
-
-    const user = await userModel.create({
-        username,
-        email: email.toLowerCase(),
-        password: hash
-    })
-
-    const token = jwt.sign(
-        { id: user._id, username: user.username },
-        process.env.JWT_SECRET,
-        { expiresIn: "1d" }
-    )
-
-    res.cookie("token", token, COOKIE_OPTIONS)
-
-    const { getFreeUsageStatus } = require("../services/entitlement.service")
-    let entitlements = null
+async function registerUserController(req, res, next) {
     try {
-        entitlements = await getFreeUsageStatus(user._id)
-    } catch { }
+        const parsed = registerSchema.safeParse(req.body)
+        if (!parsed.success) {
+            const firstError = parsed.error.errors[0]
+            return res.status(400).json({ message: firstError.message })
+        }
 
-    res.status(201).json({
-        message: "User registered successfully",
-        user: {
-            id: user._id,
-            username: user.username,
-            email: user.email,
-            plan: user.plan,
-            reportsUsedThisMonth: user.reportsUsedThisMonth,
-            createdAt: user.createdAt
-        },
-        entitlements,
-    })
+        const { username, email, password } = parsed.data
+
+        const isUserAlreadyExists = await userModel.findOne({
+            $or: [{ username }, { email }]
+        })
+
+        if (isUserAlreadyExists) {
+            return res.status(400).json({
+                message: "Account already exists with this email address or username"
+            })
+        }
+
+        const hash = await bcrypt.hash(password, 12)
+
+        const user = await userModel.create({
+            username,
+            email: email.toLowerCase(),
+            password: hash
+        })
+
+        const token = jwt.sign(
+            { id: user._id, username: user.username },
+            process.env.JWT_SECRET,
+            { expiresIn: "1d" }
+        )
+
+        res.cookie("token", token, COOKIE_OPTIONS)
+
+        const { getFreeUsageStatus } = require("../services/entitlement.service")
+        let entitlements = null
+        try {
+            entitlements = await getFreeUsageStatus(user._id)
+        } catch { }
+
+        res.status(201).json({
+            message: "User registered successfully",
+            user: {
+                id: user._id,
+                username: user.username,
+                email: user.email,
+                plan: user.plan,
+                reportsUsedThisMonth: user.reportsUsedThisMonth,
+                createdAt: user.createdAt
+            },
+            entitlements,
+        })
+    } catch (error) {
+        console.error("Register error:", error.message, error.stack)
+        next(error)
+    }
 }
 
 /**

@@ -58,18 +58,17 @@ const Register = () => {
         if (!username || !email || !password) {
             return toast.error('Please fill in all fields')
         }
-        if (password.length < 6) {
-            return toast.error('Password must be at least 6 characters')
+        if (password.length < 8) {
+            return toast.error('Password must be at least 8 characters with uppercase, lowercase, and a number')
         }
 
-        const promise = handleRegister({ username, email, password })
-        toast.promise(promise, {
-            loading: 'Initializing your profile...',
-            success: '🚀 Account created! Welcome to ResuNova.',
-            error: (err) => err.message,
-        })
-        const success = await promise
-        if (success) navigate('/dashboard')
+        try {
+            await handleRegister({ username, email, password })
+            toast.success('Account created! Welcome to ResuNova.')
+            navigate('/dashboard')
+        } catch (err) {
+            toast.error(err.message)
+        }
     }
 
     return (
@@ -152,13 +151,13 @@ const Register = () => {
                             {[EDGES[0], EDGES[3], EDGES[7]].map(([a, b], i) => (
                                 <motion.circle
                                     key={`pulse-${i}`}
-                                    cx={NODES[a].cx} cy={NODES[a].cy}
+                                    cx={NODES[a].cx}
+                                    cy={NODES[a].cy}
                                     r={3}
                                     fill="#2dd4bf"
                                     filter="url(#glow)"
+                                    initial={{ opacity: 0 }}
                                     animate={{
-                                        cx: [NODES[a].cx, NODES[b].cx],
-                                        cy: [NODES[a].cy, NODES[b].cy],
                                         opacity: [0, 1, 1, 0],
                                     }}
                                     transition={{

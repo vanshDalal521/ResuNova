@@ -3,6 +3,7 @@
  */
 const errorHandler = (err, req, res, next) => {
     console.error(`[Error] ${err.message}`)
+    if (err.stack) console.error(err.stack.split('\n').slice(0, 6).join('\n'))
 
     // Multer errors
     if (err.code === "LIMIT_FILE_SIZE") {

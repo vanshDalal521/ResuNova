@@ -40,17 +40,12 @@ const Login = () => {
             return toast.error('Please fill in all fields')
         }
 
-        const promise = handleLogin({ email, password })
-
-        toast.promise(promise, {
-            loading: 'Authorizing...',
-            success: 'Welcome back! 🚀',
-            error: (err) => err.message,
-        })
-
-        const success = await promise
-        if (success) {
+        try {
+            await handleLogin({ email, password })
+            toast.success('Welcome back!')
             navigate('/dashboard')
+        } catch (err) {
+            toast.error(err.message)
         }
     }
 
