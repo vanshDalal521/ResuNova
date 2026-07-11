@@ -91,9 +91,18 @@ const Home = () => {
         navigate(`/interview/${data._id}`)
       }
     } catch (err) {
-      const msg = err?.response?.data?.error?.message || 'Failed to generate strategy. Please try again.'
+      const statusCode = err?.response?.status
+      const errCode = err?.response?.data?.error?.code
+      let msg = err?.response?.data?.error?.message || 'Failed to generate strategy. Please try again.'
+
+      if (statusCode === 429 && errCode === "GEMINI_QUOTA_EXHAUSTED") {
+        msg = "AI service quota exhausted. Please try again later."
+      } else if (statusCode === 429) {
+        msg = "Too many requests. Please wait a moment and try again."
+      }
+
       toast.error(msg)
-      if (err?.response?.data?.error?.code === "FREE_ANALYSIS_LIMIT_REACHED") {
+      if (errCode === "FREE_ANALYSIS_LIMIT_REACHED") {
         setShowLimitModal(true)
       }
       throw err

@@ -1,11 +1,14 @@
 const { GoogleGenAI } = require("@google/genai")
 const { z } = require("zod")
 const { zodToJsonSchema } = require("zod-to-json-schema")
-const puppeteer = require("puppeteer")
 
-const ai = new GoogleGenAI({
-    apiKey: process.env.GOOGLE_GENAI_API_KEY
-})
+let ai = null
+function getAI() {
+    if (!ai) {
+        ai = new GoogleGenAI({ apiKey: process.env.GOOGLE_GENAI_API_KEY })
+    }
+    return ai
+}
 
 
 function buildInterviewReportSchema({ includeBehavioral, includePrepPlan }) {
@@ -82,24 +85,36 @@ async function generateInterviewReport({ resume, selfDescription, jobDescription
                         6. FORMAT: Return only valid JSON following the provided schema. No markdown wrappers.
     `
 
-        console.log("Calling Gemini API with model: gemini-2.5-flash");
+        const schema = zodToJsonSchema(interviewReportSchema)
+        delete schema.$schema
+
+        console.log(`[${new Date().toISOString()}] Calling Gemini API: gemini-2.0-flash`);
         let result;
         let retries = 3;
         while (retries > 0) {
             try {
-                result = await ai.models.generateContent({
-                    model: "gemini-2.5-flash",
+                result = await getAI().models.generateContent({
+                    model: "gemini-2.0-flash",
                     contents: [{ role: "user", parts: [{ text: prompt }] }],
                     config: {
                         responseMimeType: "application/json",
-                        responseSchema: zodToJsonSchema(interviewReportSchema),
+                        responseSchema: schema,
                     }
                 });
-                break; // Success!
+                break;
             } catch (error) {
-                if (error.message.includes("429") && retries > 1) {
-                    console.log(`Rate limited. Retrying in 5s... (${retries - 1} retries left)`);
-                    await new Promise(resolve => setTimeout(resolve, 5000));
+                console.error(`[Gemini] Attempt failed (${4 - retries}/3):`, error.name, error.message);
+                const isQuotaExhausted = error.message?.includes("RESOURCE_EXHAUSTED") || error.message?.includes("limit: 0")
+                if (isQuotaExhausted) {
+                    const err = new Error("Gemini API daily quota has been exhausted. Please enable billing at https://ai.google.dev or try again tomorrow.")
+                    err.statusCode = 429
+                    err.code = "GEMINI_QUOTA_EXHAUSTED"
+                    throw err
+                }
+                if (error.message?.includes("429") && retries > 1) {
+                    const delay = retries > 1 ? 2000 : 5000
+                    console.log(`[Gemini] Rate limited. Retrying in ${delay}ms... (${retries - 1} retries left)`);
+                    await new Promise(resolve => setTimeout(resolve, delay));
                     retries--;
                 } else {
                     throw error;
@@ -107,25 +122,25 @@ async function generateInterviewReport({ resume, selfDescription, jobDescription
             }
         }
 
-        let text = result.text || "{}";
+        let text = result?.text || "{}";
         text = text.replace(/```json\n?|```/g, "").trim();
         const jsonResponse = JSON.parse(text);
 
-        // Optional: Validate with Zod for extra safety
         const validated = interviewReportSchema.safeParse(jsonResponse);
         if (!validated.success) {
-            console.error("Zod Validation Error:", validated.error);
+            console.error("Zod Validation Error:", validated.error.issues);
             return jsonResponse;
         }
 
         return validated.data;
     } catch (error) {
-        console.error("Gemini API Error:", error.name, "-", error.message);
+        console.error(`[Gemini] generateInterviewReport FAILED:`, error.name, "-", error.message);
         throw new Error(`Failed to generate interview report: ${error.message}`);
     }
 }
 
 async function generatePdfFromHtml(htmlContent) {
+    const puppeteer = require("puppeteer")
     let browser;
     try {
         browser = await puppeteer.launch({
@@ -186,23 +201,27 @@ async function generateResumePdf({ resume, selfDescription, jobDescription }) {
                         7. Improve Content: Heavily rewrite the candidate's original resume phrasing. Elevate it into highly impactful, action-oriented bullet points starting with strong verbs, ensuring quantifiable results are highlighted where applicable. Fill in minor gaps professionally if needed to make the profile look elite.
                     `;
 
-        console.log("Calling Gemini API for resume generation with model: gemini-2.5-flash...");
+        const schema = zodToJsonSchema(resumePdfSchema)
+        delete schema.$schema
+
+        console.log(`[${new Date().toISOString()}] Calling Gemini API: gemini-2.0-flash (resume)`);
         let result;
         let retries = 3;
         while (retries > 0) {
             try {
-                result = await ai.models.generateContent({
-                    model: "gemini-2.5-flash",
+                result = await getAI().models.generateContent({
+                    model: "gemini-2.0-flash",
                     contents: [{ role: "user", parts: [{ text: prompt }] }],
                     config: {
                         responseMimeType: "application/json",
-                        responseSchema: zodToJsonSchema(resumePdfSchema),
+                        responseSchema: schema,
                     }
                 });
                 break;
             } catch (error) {
-                if (error.message.includes("429") && retries > 1) {
-                    console.log(`Rate limited in resume generation. Retrying in 5s... (${retries - 1} retries left)`);
+                console.error(`[Gemini] Resume attempt failed (${4 - retries}/3):`, error.name, error.message);
+                if (error.message?.includes("429") && retries > 1) {
+                    console.log(`[Gemini] Rate limited in resume generation. Retrying in 5s... (${retries - 1} retries left)`);
                     await new Promise(resolve => setTimeout(resolve, 5000));
                     retries--;
                 } else {
@@ -211,7 +230,7 @@ async function generateResumePdf({ resume, selfDescription, jobDescription }) {
             }
         }
 
-        let text = result.text || "{}";
+        let text = result?.text || "{}";
         text = text.replace(/```json\n?|```/g, "").trim();
         const jsonContent = JSON.parse(text);
 
@@ -222,7 +241,7 @@ async function generateResumePdf({ resume, selfDescription, jobDescription }) {
         const pdfBuffer = await generatePdfFromHtml(jsonContent.html);
         return pdfBuffer;
     } catch (error) {
-        console.error("Resume Generation Error:", error);
+        console.error(`[Gemini] generateResumePdf FAILED:`, error.name, "-", error.message);
         throw new Error(`Failed to generate resume: ${error.message}`);
     }
 }

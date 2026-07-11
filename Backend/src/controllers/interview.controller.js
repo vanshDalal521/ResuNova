@@ -101,13 +101,14 @@ async function generateInterViewReportController(req, res, next) {
         })
     } catch (error) {
         await failAnalysisUsage(requestId)
-        console.error("generateInterViewReportController ERROR:", error.name, "-", error.message)
-        console.error("FULL ERROR:", JSON.stringify(error, Object.getOwnPropertyNames(error)))
-        console.error("STACK:", error.stack)
-        res.status(500).json({
+        console.error(`[Interview] ERROR:`, error.name, "-", error.message)
+        if (error.stack) console.error(error.stack.split("\n").slice(0, 6).join("\n"))
+
+        const statusCode = error.statusCode || 500
+        res.status(statusCode).json({
             success: false,
             error: {
-                code: error.name || "AI_SERVICE_ERROR",
+                code: error.code || error.name || "AI_SERVICE_ERROR",
                 message: error.message || "Internal server error during report generation",
             },
         })

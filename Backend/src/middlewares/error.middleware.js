@@ -47,11 +47,25 @@ const errorHandler = (err, req, res, next) => {
         })
     }
 
-    // Generic — never leak stack traces
-    const statusCode = err.statusCode || 500
+    // Quota / rate-limit errors from AI service
+    if (err.statusCode) {
+        return res.status(err.statusCode).json({
+            success: false,
+            error: {
+                code: err.code || err.name || "RATE_LIMITED",
+                message: err.message,
+            },
+        })
+    }
+
+    // Generic — never leak stack traces in production, but include error name
+    const statusCode = 500
     res.status(statusCode).json({
         success: false,
-        message: "Internal server error",
+        error: {
+            code: err.name || "INTERNAL_ERROR",
+            message: err.message || "Internal server error",
+        },
     })
 }
 

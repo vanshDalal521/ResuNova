@@ -100,6 +100,36 @@ app.get("/api/health", (req, res) => {
     res.json({ message: "ResuNova Backend is running successfully!" })
 })
 
+app.get("/api/diagnose", async (req, res) => {
+    const results = {
+        nodeVersion: process.version,
+        hasGoogleKey: !!process.env.GOOGLE_GENAI_API_KEY,
+        hasMongoUri: !!process.env.MONGO_URI,
+        hasJwtSecret: !!process.env.JWT_SECRET,
+        hasFrontendUrl: !!process.env.FRONTEND_URL,
+        frontendUrl: process.env.FRONTEND_URL || "(not set)",
+        mongoState: mongoose.connection.readyState,
+    }
+    if (!process.env.GOOGLE_GENAI_API_KEY) {
+        return res.status(500).json({ success: false, results, error: "GOOGLE_GENAI_API_KEY is not set" })
+    }
+    try {
+        const { GoogleGenAI } = require("@google/genai")
+        const testAI = new GoogleGenAI({ apiKey: process.env.GOOGLE_GENAI_API_KEY })
+        const r = await testAI.models.generateContent({
+            model: "gemini-2.0-flash",
+            contents: "Reply with exactly: ok",
+        })
+        results.gemini = "working"
+        results.geminiResponse = r?.text?.substring(0, 100)
+    } catch (err) {
+        results.gemini = "failed"
+        results.geminiError = err.message
+        results.geminiErrorName = err.name
+    }
+    res.json({ success: true, results })
+})
+
 /* require all the routes here */
 const authRouter = require("./routes/auth.routes")
 const interviewRouter = require("./routes/interview.routes")
