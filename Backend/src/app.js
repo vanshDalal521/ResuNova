@@ -1,4 +1,5 @@
 const express = require("express")
+const path = require("path")
 const cookieParser = require("cookie-parser")
 const cors = require("cors")
 const mongoose = require("mongoose")
@@ -73,7 +74,7 @@ app.use((req, res, next) => {
     next()
 })
 
-app.get("/", (req, res) => {
+app.get("/api/health", (req, res) => {
     res.json({ message: "ResuNova Backend is running successfully!" })
 })
 
@@ -91,6 +92,10 @@ app.use("/api/interview", interviewRouter)
 app.use("/api/payment", paymentRouter)
 app.use("/api/entitlements", entitlementRouter)
 
+/* Serve frontend static files in production */
+const frontendDist = path.join(__dirname, "../../Frontend/dist")
+app.use(express.static(frontendDist))
+
 /* Periodic cleanup of expired reservations (every 5 minutes) */
 setInterval(() => {
     releaseExpiredReservations().catch(err => console.error("Reservation cleanup error:", err.message))
@@ -98,5 +103,10 @@ setInterval(() => {
 
 /* Global Error Handler */
 app.use(errorHandler)
+
+/* SPA fallback — must be after API routes and error handler */
+app.get("*", (req, res) => {
+    res.sendFile(path.join(frontendDist, "index.html"))
+})
 
 module.exports = app
