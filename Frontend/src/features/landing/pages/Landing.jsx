@@ -57,7 +57,7 @@ const Landing = () => {
   const navId = (label) => label === 'How It Works' ? 'how-it-works' : label.toLowerCase()
 
   return (
-    <div className="landing">
+    <div className="landing" style={{ position: 'relative' }}>
       <ScrollProgress />
       <SectionNav />
       <FloatingOrbs />

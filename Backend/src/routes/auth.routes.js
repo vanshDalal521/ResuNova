@@ -12,6 +12,7 @@ const authLimiter = rateLimit({
     message: { success: false, message: "Too many attempts. Please try again in 15 minutes." },
     standardHeaders: true,
     legacyHeaders: false,
+    validate: { trustProxy: false },
 })
 
 authRouter.post("/register", authLimiter, authController.registerUserController)

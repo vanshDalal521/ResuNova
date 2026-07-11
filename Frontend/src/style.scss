@@ -62,6 +62,10 @@
     font-family: 'Outfit', sans-serif;
 }
 
+html {
+    position: relative;
+}
+
 body {
     background-color: var(--bg);
     color: var(--txt);
