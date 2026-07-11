@@ -104,9 +104,13 @@ setInterval(() => {
 /* Global Error Handler */
 app.use(errorHandler)
 
-/* SPA fallback — must be after API routes and error handler */
-app.get("*", (req, res) => {
-    res.sendFile(path.join(frontendDist, "index.html"))
+/* SPA fallback — catch-all for non-API GET requests */
+app.use((req, res, next) => {
+    if (req.method === "GET" && !req.path.startsWith("/api")) {
+        res.sendFile(path.join(frontendDist, "index.html"))
+    } else {
+        next()
+    }
 })
 
 module.exports = app
