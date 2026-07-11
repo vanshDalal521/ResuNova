@@ -7,6 +7,9 @@ const hpp = require("hpp")
 
 const app = express()
 
+// Stripe webhook handler — require early for webhook route placement
+const paymentController = require("./controllers/payment.controller")
+
 // Security headers
 app.use(helmet({
     crossOriginResourcePolicy: { policy: "cross-origin" },
@@ -14,13 +17,21 @@ app.use(helmet({
 }))
 
 // CORS — strict, only allow frontend origin
+const ALLOWED_ORIGINS = [
+    "http://localhost:8080",
+    "http://127.0.0.1:8080",
+    ...(process.env.FRONTEND_URL ? [process.env.FRONTEND_URL] : []),
+]
 app.use(cors({
-    origin: ["http://localhost:8080", "http://127.0.0.1:8080"],
+    origin: ALLOWED_ORIGINS,
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "Accept"],
     maxAge: 86400,
 }))
+
+// Stripe webhook route — MUST be before express.json() for raw body
+app.post("/api/payment/webhook", express.raw({ type: "application/json" }), paymentController.handleWebhook)
 
 // Body parsing with size limits
 app.use(express.json({ limit: "1mb" }))
@@ -71,7 +82,6 @@ const authRouter = require("./routes/auth.routes")
 const interviewRouter = require("./routes/interview.routes")
 const paymentRouter = require("./routes/payment.routes")
 const entitlementRouter = require("./routes/entitlement.routes")
-const paymentController = require("./controllers/payment.controller")
 const errorHandler = require("./middlewares/error.middleware")
 const { releaseExpiredReservations } = require("./services/entitlement.service")
 
@@ -80,9 +90,6 @@ app.use("/api/auth", authRouter)
 app.use("/api/interview", interviewRouter)
 app.use("/api/payment", paymentRouter)
 app.use("/api/entitlements", entitlementRouter)
-
-// Stripe webhook route (raw body, must use express.raw BEFORE express.json)
-app.post("/api/payment/webhook", express.raw({ type: "application/json" }), paymentController.handleWebhook)
 
 /* Periodic cleanup of expired reservations (every 5 minutes) */
 setInterval(() => {

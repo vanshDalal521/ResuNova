@@ -1,7 +1,16 @@
 const Stripe = require("stripe")
 const userModel = require("../models/user.model")
 
-const stripe = Stripe(process.env.STRIPE_SECRET_KEY)
+let _stripe = null
+function getStripe() {
+    if (!_stripe) {
+        if (!process.env.STRIPE_SECRET_KEY) {
+            throw new Error("STRIPE_SECRET_KEY is not configured")
+        }
+        _stripe = Stripe(process.env.STRIPE_SECRET_KEY)
+    }
+    return _stripe
+}
 
 /**
  * POST /api/payment/create-checkout
@@ -25,7 +34,7 @@ async function createCheckoutSession(req, res) {
         // Create or retrieve Stripe customer
         let customerId = user.stripeCustomerId
         if (!customerId) {
-            const customer = await stripe.customers.create({
+            const customer = await getStripe().customers.create({
                 email: user.email,
                 metadata: { userId: user._id.toString() },
             })
@@ -33,7 +42,7 @@ async function createCheckoutSession(req, res) {
             await userModel.findByIdAndUpdate(user._id, { stripeCustomerId: customerId })
         }
 
-        const session = await stripe.checkout.sessions.create({
+        const session = await getStripe().checkout.sessions.create({
             customer: customerId,
             mode: "subscription",
             payment_method_types: ["card"],
@@ -67,7 +76,7 @@ async function createPortalSession(req, res) {
             return res.status(400).json({ success: false, message: "No billing account found" })
         }
 
-        const session = await stripe.billingPortal.sessions.create({
+        const session = await getStripe().billingPortal.sessions.create({
             customer: user.stripeCustomerId,
             return_url: `${process.env.FRONTEND_URL}/profile`,
         })
@@ -88,7 +97,7 @@ async function handleWebhook(req, res) {
     let event
 
     try {
-        event = stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET)
+        event = getStripe().webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET)
     } catch (err) {
         console.error("Webhook signature verification failed:", err.message)
         return res.status(400).json({ success: false, message: "Invalid signature" })
