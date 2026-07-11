@@ -44,6 +44,9 @@ function buildInterviewReportSchema({ includeBehavioral, includePrepPlan }) {
 }
 
 async function generateInterviewReport({ resume, selfDescription, jobDescription, companyName, includeBehavioral, includePrepPlan }) {
+    if (!process.env.GOOGLE_GENAI_API_KEY) {
+        throw new Error("GOOGLE_GENAI_API_KEY is not set — cannot generate interview report")
+    }
     const includeBehavioralQuestions = includeBehavioral !== false
     const includePrepPlanQuestions = includePrepPlan !== false
     try {
@@ -160,6 +163,9 @@ async function generatePdfFromHtml(htmlContent) {
 }
 
 async function generateResumePdf({ resume, selfDescription, jobDescription }) {
+    if (!process.env.GOOGLE_GENAI_API_KEY) {
+        throw new Error("GOOGLE_GENAI_API_KEY is not set — cannot generate resume PDF")
+    }
     try {
         const resumePdfSchema = z.object({
             html: z.string().describe("The HTML content of the resume")

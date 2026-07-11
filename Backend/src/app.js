@@ -6,6 +6,14 @@ const mongoose = require("mongoose")
 const helmet = require("helmet")
 const hpp = require("hpp")
 
+// Vercel serverless skips server.js — validate critical env vars here
+const REQUIRED_ENV = ["MONGO_URI", "JWT_SECRET", "GOOGLE_GENAI_API_KEY"]
+for (const key of REQUIRED_ENV) {
+    if (!process.env[key]) {
+        console.error(`WARNING: Missing env var "${key}" — affected endpoints will return 500`)
+    }
+}
+
 const app = express()
 
 // Trust Render proxy (1 hop) for rate limiting, secure cookies, IP detection
@@ -105,6 +113,11 @@ app.use("/api/auth", authRouter)
 app.use("/api/interview", interviewRouter)
 app.use("/api/payment", paymentRouter)
 app.use("/api/entitlements", entitlementRouter)
+
+// Catch-all for unmatched /api/* routes — returns JSON instead of Vercel 404
+app.use("/api", (req, res) => {
+    res.status(404).json({ success: false, message: `Route not found: ${req.method} ${req.path}` })
+})
 
 /* Serve frontend static files in production */
 const frontendDist = path.join(__dirname, "../../Frontend/dist")

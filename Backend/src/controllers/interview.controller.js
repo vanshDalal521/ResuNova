@@ -75,6 +75,10 @@ async function generateInterViewReportController(req, res, next) {
             includePrepPlan: isPro,
         })
 
+        if (!interViewReportByAi || typeof interViewReportByAi !== "object") {
+            throw new Error("AI service returned an invalid response")
+        }
+
         const interviewReport = await interviewReportModel.create({
             user: req.user.id,
             resume: resumeText,
