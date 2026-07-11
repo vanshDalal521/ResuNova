@@ -45,7 +45,7 @@ function buildInterviewReportSchema({ includeBehavioral, includePrepPlan }) {
 
 async function generateInterviewReport({ resume, selfDescription, jobDescription, companyName, includeBehavioral, includePrepPlan }) {
     if (!process.env.GOOGLE_GENAI_API_KEY) {
-        throw new Error("GOOGLE_GENAI_API_KEY is not set — cannot generate interview report")
+        throw new Error("GOOGLE_GENAI_API_KEY is not set (on this server) — cannot generate interview report")
     }
     const includeBehavioralQuestions = includeBehavioral !== false
     const includePrepPlanQuestions = includePrepPlan !== false
@@ -82,13 +82,13 @@ async function generateInterviewReport({ resume, selfDescription, jobDescription
                         6. FORMAT: Return only valid JSON following the provided schema. No markdown wrappers.
     `
 
-        console.log("Calling Gemini API with model: models/gemini-2.5-flash");
+        console.log("Calling Gemini API with model: gemini-2.5-flash");
         let result;
         let retries = 3;
         while (retries > 0) {
             try {
                 result = await ai.models.generateContent({
-                    model: "gemini-flash-latest",
+                    model: "gemini-2.5-flash",
                     contents: [{ role: "user", parts: [{ text: prompt }] }],
                     config: {
                         responseMimeType: "application/json",
@@ -120,7 +120,7 @@ async function generateInterviewReport({ resume, selfDescription, jobDescription
 
         return validated.data;
     } catch (error) {
-        console.error("Gemini API Error:", error);
+        console.error("Gemini API Error:", error.name, "-", error.message);
         throw new Error(`Failed to generate interview report: ${error.message}`);
     }
 }
@@ -164,7 +164,7 @@ async function generatePdfFromHtml(htmlContent) {
 
 async function generateResumePdf({ resume, selfDescription, jobDescription }) {
     if (!process.env.GOOGLE_GENAI_API_KEY) {
-        throw new Error("GOOGLE_GENAI_API_KEY is not set — cannot generate resume PDF")
+        throw new Error("GOOGLE_GENAI_API_KEY is not set (on this server) — cannot generate resume PDF")
     }
     try {
         const resumePdfSchema = z.object({
@@ -186,13 +186,13 @@ async function generateResumePdf({ resume, selfDescription, jobDescription }) {
                         7. Improve Content: Heavily rewrite the candidate's original resume phrasing. Elevate it into highly impactful, action-oriented bullet points starting with strong verbs, ensuring quantifiable results are highlighted where applicable. Fill in minor gaps professionally if needed to make the profile look elite.
                     `;
 
-        console.log("Calling Gemini API for resume generation with model: models/gemini-2.5-flash...");
+        console.log("Calling Gemini API for resume generation with model: gemini-2.5-flash...");
         let result;
         let retries = 3;
         while (retries > 0) {
             try {
                 result = await ai.models.generateContent({
-                    model: "gemini-flash-latest",
+                    model: "gemini-2.5-flash",
                     contents: [{ role: "user", parts: [{ text: prompt }] }],
                     config: {
                         responseMimeType: "application/json",

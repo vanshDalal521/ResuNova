@@ -100,14 +100,16 @@ async function generateInterViewReportController(req, res, next) {
             interviewReport: serialized,
         })
     } catch (error) {
-        // Release the reserved slot on failure
         await failAnalysisUsage(requestId)
-        console.error("CRITICAL ERROR in generateInterViewReportController:", error.message)
+        console.error("generateInterViewReportController ERROR:", error.name, "-", error.message)
         console.error("FULL ERROR:", JSON.stringify(error, Object.getOwnPropertyNames(error)))
         console.error("STACK:", error.stack)
         res.status(500).json({
             success: false,
-            message: "Internal server error during report generation",
+            error: {
+                code: error.name || "AI_SERVICE_ERROR",
+                message: error.message || "Internal server error during report generation",
+            },
         })
     }
 }
