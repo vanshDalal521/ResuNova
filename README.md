@@ -101,12 +101,6 @@ ResuNova/
 
 ---
 
-## 🤝 The Team
-- **Vansh Dalal**: Backend Architecture & AI Core Engineering.
-- **Ayush Kumar**: Frontend Lead & Design System Architect.
-
----
-
 ## 🛡️ License
 Distributed under the **ISC License**. See `package.json` for details.
 
