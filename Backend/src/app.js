@@ -53,12 +53,23 @@ app.use(cookieParser())
 // DB connection middleware — Vercel serverless cold-start fix
 // On Render/local, server.js already connected; this is a ~0ms no-op
 app.use(async (req, res, next) => {
-    if (mongoose.connection.readyState !== 1) {
-        await mongoose.connect(process.env.MONGO_URI, {
-            serverSelectionTimeoutMS: 5000,
+    try {
+        if (mongoose.connection.readyState !== 1) {
+            await mongoose.connect(process.env.MONGO_URI, {
+                serverSelectionTimeoutMS: 5000,
+            })
+        }
+        next()
+    } catch (err) {
+        console.error("Database connection error in middleware:", err.message)
+        res.status(500).json({
+            success: false,
+            error: {
+                code: "DB_CONNECTION_ERROR",
+                message: "Database connection failed. Please ensure MONGO_URI is set properly.",
+            }
         })
     }
-    next()
 })
 
 // Custom NoSQL injection sanitizer (compatible with Express 5)
@@ -117,7 +128,7 @@ app.get("/api/diagnose", async (req, res) => {
         const { GoogleGenAI } = require("@google/genai")
         const testAI = new GoogleGenAI({ apiKey: process.env.GOOGLE_GENAI_API_KEY })
         const r = await testAI.models.generateContent({
-            model: "gemini-2.0-flash",
+            model: "gemini-3.5-flash",
             contents: "Reply with exactly: ok",
         })
         results.gemini = "working"

@@ -93,15 +93,21 @@ const Home = () => {
     } catch (err) {
       const statusCode = err?.response?.status
       const errCode = err?.response?.data?.error?.code
-      let msg = err?.response?.data?.error?.message || 'Failed to generate strategy. Please try again.'
+      let msg = err?.response?.data?.error?.message 
+        || err?.response?.data?.message 
+        || (typeof err?.response?.data === 'string' ? err?.response?.data : null)
+        || err?.message 
+        || 'Failed to generate strategy. Please try again.'
 
       if (statusCode === 429 && errCode === "GEMINI_QUOTA_EXHAUSTED") {
         msg = "AI service quota exhausted. Please try again later."
-      } else if (statusCode === 429) {
-        msg = "Too many requests. Please wait a moment and try again."
+      } else if (statusCode === 429 && errCode === "FREE_ANALYSIS_LIMIT_REACHED") {
+        msg = err?.response?.data?.error?.message || "You have reached your daily analysis limit."
+      } else if (statusCode === 504 || (statusCode === 500 && (msg.includes("TIMEOUT") || msg.includes("timed out")))) {
+        msg = "Server timed out while generating analysis. Please try again in a few moments."
       }
 
-      toast.error(msg)
+      toast.error(msg, { duration: 6000 })
       if (errCode === "FREE_ANALYSIS_LIMIT_REACHED") {
         setShowLimitModal(true)
       }

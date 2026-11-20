@@ -48,7 +48,10 @@ function buildInterviewReportSchema({ includeBehavioral, includePrepPlan }) {
 
 async function generateInterviewReport({ resume, selfDescription, jobDescription, companyName, includeBehavioral, includePrepPlan }) {
     if (!process.env.GOOGLE_GENAI_API_KEY) {
-        throw new Error("GOOGLE_GENAI_API_KEY is not set (on this server) — cannot generate interview report")
+        const err = new Error("GOOGLE_GENAI_API_KEY is not configured on this server. Please add it to your hosting dashboard environment variables.")
+        err.statusCode = 500
+        err.code = "ENV_KEY_MISSING"
+        throw err
     }
     const includeBehavioralQuestions = includeBehavioral !== false
     const includePrepPlanQuestions = includePrepPlan !== false
@@ -56,11 +59,11 @@ async function generateInterviewReport({ resume, selfDescription, jobDescription
         const interviewReportSchema = buildInterviewReportSchema({ includeBehavioral, includePrepPlan })
 
         const behavioralSection = includeBehavioralQuestions
-            ? `3. BEHAVIORAL QUESTIONS: Generate at least 10-12 behavioral questions tailored to leadership, cultural fit, and specific scenarios for ${companyName || "the target company"}.`
+            ? `3. BEHAVIORAL QUESTIONS: Generate 5-6 behavioral questions tailored to leadership, cultural fit, and specific scenarios for ${companyName || "the target company"}.`
             : ``
 
         const prepPlanSection = includePrepPlanQuestions
-            ? `4. PREPARATION PLAN: Create a complete day-by-day 7-day preparation plan for the candidate to follow.`
+            ? `4. PREPARATION PLAN: Create a focused day-by-day 7-day preparation plan for the candidate to follow.`
             : ``
 
         const prompt = `You are an elite, highly critical Technical Interviewer and Hiring Manager. Evaluate this candidate for the following role:
@@ -78,7 +81,7 @@ async function generateInterviewReport({ resume, selfDescription, jobDescription
 
                         ANALYSIS INSTRUCTIONS:
                         1. DOMAIN VALIDATION: First, check if the candidate's core expertise aligns with the Job Description's field. If they are from a completely different domain (e.g. React/Frontend vs. ML/Data Science), DO NOT exceed 20% in the match score.
-                        2. TECHNICAL QUESTIONS: Identify major gaps. Generate at least 12-15 difficult technical questions focusing on challenging those gaps and deeply related to the job role and ${companyName || "the target company"}.
+                        2. TECHNICAL QUESTIONS: Identify major gaps. Generate 6-8 sharp, challenging technical questions focusing on those gaps and deeply related to the job role and ${companyName || "the target company"}. Keep answers crisp and actionable.
                         ${behavioralSection}
                         ${prepPlanSection}
                         5. ATS BUZZWORDS: Extract the most crucial buzzwords and keywords from the job description to help the candidate improve their resume.
@@ -140,7 +143,18 @@ async function generateInterviewReport({ resume, selfDescription, jobDescription
 
         let text = result?.text || "{}";
         text = text.replace(/```json\n?|```/g, "").trim();
-        const jsonResponse = JSON.parse(text);
+        let jsonResponse;
+        try {
+            jsonResponse = JSON.parse(text);
+        } catch {
+            const start = text.indexOf("{");
+            const end = text.lastIndexOf("}");
+            if (start !== -1 && end > start) {
+                jsonResponse = JSON.parse(text.slice(start, end + 1));
+            } else {
+                throw new Error("Invalid JSON structure returned by AI service");
+            }
+        }
 
         const validated = interviewReportSchema.safeParse(jsonResponse);
         if (!validated.success) {
