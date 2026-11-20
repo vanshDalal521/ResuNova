@@ -58,6 +58,12 @@ const Register = () => {
         if (!username || !email || !password) {
             return toast.error('Please fill in all fields')
         }
+        if (username.length < 3 || username.length > 30) {
+            return toast.error('Username must be between 3 and 30 characters')
+        }
+        if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+            return toast.error('Username can only contain letters, numbers, and underscores (no spaces)')
+        }
         if (password.length < 8) {
             return toast.error('Password must be at least 8 characters')
         }
@@ -306,7 +312,7 @@ const Register = () => {
                                     onChange={(e) => setPassword(e.target.value)}
                                     onFocus={() => setFocused('password')}
                                     onBlur={() => setFocused(null)}
-                                    placeholder="min 6 characters"
+                                    placeholder="min 8 chars (1 upper, 1 lower, 1 number)"
                                     className="reg-field__input"
                                     autoComplete="new-password"
                                 />

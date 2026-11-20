@@ -88,38 +88,54 @@ async function generateInterviewReport({ resume, selfDescription, jobDescription
         const schema = zodToJsonSchema(interviewReportSchema)
         delete schema.$schema
 
-        console.log(`[${new Date().toISOString()}] Calling Gemini API: gemini-2.0-flash`);
+        const MODELS = ["gemini-3.5-flash", "gemini-3.8-flash"]
         let result;
-        let retries = 3;
-        while (retries > 0) {
-            try {
-                result = await getAI().models.generateContent({
-                    model: "gemini-2.0-flash",
-                    contents: [{ role: "user", parts: [{ text: prompt }] }],
-                    config: {
-                        responseMimeType: "application/json",
-                        responseSchema: schema,
+        let lastError;
+        for (const model of MODELS) {
+            let retries = 3;
+            console.log(`[${new Date().toISOString()}] Calling Gemini API: ${model}`);
+            while (retries > 0) {
+                try {
+                    result = await getAI().models.generateContent({
+                        model,
+                        contents: [{ role: "user", parts: [{ text: prompt }] }],
+                        config: {
+                            responseMimeType: "application/json",
+                            responseSchema: schema,
+                        }
+                    });
+                    lastError = null;
+                    break;
+                } catch (error) {
+                    lastError = error;
+                    console.error(`[Gemini][${model}] Attempt failed (${4 - retries}/3):`, error.name, error.message);
+                    const isQuotaExhausted = error.message?.includes("RESOURCE_EXHAUSTED") || error.message?.includes("limit: 0")
+                    if (isQuotaExhausted) {
+                        console.warn(`[Gemini][${model}] Quota exhausted for model ${model}. Moving to fallback model...`);
+                        break; // Stop retrying this model, proceed to the next in MODELS
                     }
-                });
-                break;
-            } catch (error) {
-                console.error(`[Gemini] Attempt failed (${4 - retries}/3):`, error.name, error.message);
-                const isQuotaExhausted = error.message?.includes("RESOURCE_EXHAUSTED") || error.message?.includes("limit: 0")
-                if (isQuotaExhausted) {
-                    const err = new Error("Gemini API daily quota has been exhausted. Please enable billing at https://ai.google.dev or try again tomorrow.")
-                    err.statusCode = 429
-                    err.code = "GEMINI_QUOTA_EXHAUSTED"
-                    throw err
-                }
-                if (error.message?.includes("429") && retries > 1) {
-                    const delay = retries > 1 ? 2000 : 5000
-                    console.log(`[Gemini] Rate limited. Retrying in ${delay}ms... (${retries - 1} retries left)`);
-                    await new Promise(resolve => setTimeout(resolve, delay));
-                    retries--;
-                } else {
-                    throw error;
+                    const isRetryable = error.message?.includes("429") || error.message?.includes("503") || error.message?.includes("UNAVAILABLE")
+                    if (isRetryable && retries > 1) {
+                        const delay = error.message?.includes("429") ? 3000 : 2000
+                        console.log(`[Gemini][${model}] Retrying in ${delay}ms... (${retries - 1} retries left)`);
+                        await new Promise(resolve => setTimeout(resolve, delay));
+                        retries--;
+                    } else {
+                        break; // try next model
+                    }
                 }
             }
+            if (!lastError) break; // success — stop trying models
+            console.log(`[Gemini] Falling back from ${model} due to: ${lastError.message?.substring(0, 80)}`);
+        }
+        if (lastError) {
+            const isQuota = lastError.message?.includes("RESOURCE_EXHAUSTED") || lastError.message?.includes("limit: 0")
+            const err = new Error(isQuota
+                ? "Gemini API daily quota has been exhausted. Please enable billing at https://ai.google.dev or try again tomorrow."
+                : `Failed to generate interview report: ${lastError.message}`);
+            err.statusCode = isQuota ? 429 : 500;
+            err.code = isQuota ? "GEMINI_QUOTA_EXHAUSTED" : (lastError.code || lastError.name || "AI_SERVICE_ERROR");
+            throw err;
         }
 
         let text = result?.text || "{}";
@@ -135,7 +151,10 @@ async function generateInterviewReport({ resume, selfDescription, jobDescription
         return validated.data;
     } catch (error) {
         console.error(`[Gemini] generateInterviewReport FAILED:`, error.name, "-", error.message);
-        throw new Error(`Failed to generate interview report: ${error.message}`);
+        const err = new Error(`Failed to generate interview report: ${error.message}`);
+        err.statusCode = error.statusCode || 500;
+        err.code = error.code || error.name || "AI_SERVICE_ERROR";
+        throw err;
     }
 }
 
@@ -204,31 +223,47 @@ async function generateResumePdf({ resume, selfDescription, jobDescription }) {
         const schema = zodToJsonSchema(resumePdfSchema)
         delete schema.$schema
 
-        console.log(`[${new Date().toISOString()}] Calling Gemini API: gemini-2.0-flash (resume)`);
+        const MODELS = ["gemini-3.5-flash", "gemini-3.8-flash"]
         let result;
-        let retries = 3;
-        while (retries > 0) {
-            try {
-                result = await getAI().models.generateContent({
-                    model: "gemini-2.0-flash",
-                    contents: [{ role: "user", parts: [{ text: prompt }] }],
-                    config: {
-                        responseMimeType: "application/json",
-                        responseSchema: schema,
+        let lastError;
+        for (const model of MODELS) {
+            let retries = 3;
+            console.log(`[${new Date().toISOString()}] Calling Gemini API: ${model} (resume)`);
+            while (retries > 0) {
+                try {
+                    result = await getAI().models.generateContent({
+                        model,
+                        contents: [{ role: "user", parts: [{ text: prompt }] }],
+                        config: {
+                            responseMimeType: "application/json",
+                            responseSchema: schema,
+                        }
+                    });
+                    lastError = null;
+                    break;
+                } catch (error) {
+                    lastError = error;
+                    console.error(`[Gemini][${model}] Resume attempt failed (${4 - retries}/3):`, error.name, error.message);
+                    const isQuotaExhausted = error.message?.includes("RESOURCE_EXHAUSTED") || error.message?.includes("limit: 0")
+                    if (isQuotaExhausted) {
+                        console.warn(`[Gemini][${model}] Quota exhausted for resume on ${model}. Moving to fallback model...`);
+                        break;
                     }
-                });
-                break;
-            } catch (error) {
-                console.error(`[Gemini] Resume attempt failed (${4 - retries}/3):`, error.name, error.message);
-                if (error.message?.includes("429") && retries > 1) {
-                    console.log(`[Gemini] Rate limited in resume generation. Retrying in 5s... (${retries - 1} retries left)`);
-                    await new Promise(resolve => setTimeout(resolve, 5000));
-                    retries--;
-                } else {
-                    throw error;
+                    const isRetryable = error.message?.includes("429") || error.message?.includes("503") || error.message?.includes("UNAVAILABLE")
+                    if (isRetryable && retries > 1) {
+                        const delay = error.message?.includes("429") ? 5000 : 2000
+                        console.log(`[Gemini][${model}] Retrying in ${delay}ms... (${retries - 1} retries left)`);
+                        await new Promise(resolve => setTimeout(resolve, delay));
+                        retries--;
+                    } else {
+                        break; // try next model
+                    }
                 }
             }
+            if (!lastError) break;
+            console.log(`[Gemini] Falling back from ${model} due to: ${lastError.message?.substring(0, 80)}`);
         }
+        if (lastError) throw lastError;
 
         let text = result?.text || "{}";
         text = text.replace(/```json\n?|```/g, "").trim();
