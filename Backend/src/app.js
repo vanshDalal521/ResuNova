@@ -128,7 +128,7 @@ app.get("/api/diagnose", async (req, res) => {
         const { GoogleGenAI } = require("@google/genai")
         const testAI = new GoogleGenAI({ apiKey: process.env.GOOGLE_GENAI_API_KEY })
         const r = await testAI.models.generateContent({
-            model: "gemini-3.5-flash",
+            model: "gemini-3.5-flash-lite",
             contents: "Reply with exactly: ok",
         })
         results.gemini = "working"

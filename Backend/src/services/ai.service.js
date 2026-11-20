@@ -91,7 +91,7 @@ async function generateInterviewReport({ resume, selfDescription, jobDescription
         const schema = zodToJsonSchema(interviewReportSchema)
         delete schema.$schema
 
-        const MODELS = ["gemini-3.5-flash", "gemini-3.8-flash"]
+        const MODELS = ["gemini-3.5-flash-lite", "gemini-3.1-flash-lite", "gemini-3.5-flash", "gemini-3.8-flash"]
         let result;
         let lastError;
         for (const model of MODELS) {
@@ -237,7 +237,7 @@ async function generateResumePdf({ resume, selfDescription, jobDescription }) {
         const schema = zodToJsonSchema(resumePdfSchema)
         delete schema.$schema
 
-        const MODELS = ["gemini-3.5-flash", "gemini-3.8-flash"]
+        const MODELS = ["gemini-3.5-flash-lite", "gemini-3.1-flash-lite", "gemini-3.5-flash", "gemini-3.8-flash"]
         let result;
         let lastError;
         for (const model of MODELS) {

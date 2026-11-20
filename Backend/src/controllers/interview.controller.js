@@ -79,6 +79,36 @@ async function generateInterViewReportController(req, res, next) {
             throw new Error("AI service returned an invalid response")
         }
 
+        // Sanitize fields before creating in DB to prevent Mongoose ValidationErrors
+        const cleanSkillGaps = Array.isArray(interViewReportByAi.skillGaps)
+            ? interViewReportByAi.skillGaps.map(g => ({
+                skill: String(g.skill || "Core competency"),
+                severity: ["low", "medium", "high"].includes(String(g.severity).toLowerCase())
+                    ? String(g.severity).toLowerCase()
+                    : "medium"
+            }))
+            : []
+
+        const cleanTechnicalQuestions = Array.isArray(interViewReportByAi.technicalQuestions)
+            ? interViewReportByAi.technicalQuestions.map(q => ({
+                question: String(q.question || "Technical Question"),
+                intention: String(q.intention || "Assess domain depth"),
+                answer: String(q.answer || "Structured technical approach")
+            }))
+            : []
+
+        const cleanBehavioralQuestions = Array.isArray(interViewReportByAi.behavioralQuestions)
+            ? interViewReportByAi.behavioralQuestions.map(q => ({
+                question: String(q.question || "Behavioral Question"),
+                intention: String(q.intention || "Assess situational judgment"),
+                answer: String(q.answer || "STAR response approach")
+            }))
+            : []
+
+        let cleanScore = Number(String(interViewReportByAi.matchScore ?? "50").replace(/[^0-9.]/g, ""))
+        if (isNaN(cleanScore)) cleanScore = 50
+        cleanScore = Math.max(0, Math.min(100, Math.round(cleanScore)))
+
         const interviewReport = await interviewReportModel.create({
             user: req.user.id,
             resume: resumeText,
@@ -86,6 +116,12 @@ async function generateInterViewReportController(req, res, next) {
             jobDescription,
             companyName,
             ...interViewReportByAi,
+            matchScore: cleanScore,
+            title: interViewReportByAi.title || `Assessment: ${companyName || "Target Role"}`,
+            technicalQuestions: cleanTechnicalQuestions,
+            behavioralQuestions: cleanBehavioralQuestions,
+            skillGaps: cleanSkillGaps,
+            atsBuzzwords: Array.isArray(interViewReportByAi.atsBuzzwords) ? interViewReportByAi.atsBuzzwords.map(String) : [],
         })
 
         // Mark the reservation as completed
@@ -100,7 +136,11 @@ async function generateInterViewReportController(req, res, next) {
             interviewReport: serialized,
         })
     } catch (error) {
-        await failAnalysisUsage(requestId)
+        try {
+            await failAnalysisUsage(requestId)
+        } catch (failErr) {
+            console.error("failAnalysisUsage error:", failErr.message)
+        }
         console.error(`[Interview] ERROR:`, error.name, "-", error.message)
         if (error.stack) console.error(error.stack.split("\n").slice(0, 6).join("\n"))
 
