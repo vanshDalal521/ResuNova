@@ -25,7 +25,8 @@ const Home = () => {
   const resumeInputRef = useRef()
   const navigate = useNavigate()
 
-  const isPro = user?.plan === 'pro' && user?.subscriptionStatus === 'active'
+  const isAdmin = user?.role === 'admin'
+  const isPro = isAdmin || (user?.plan === 'pro' && user?.subscriptionStatus === 'active')
   const usage = entitlements?.usage
   const used = usage?.used ?? 0
   const limit = usage?.limit ?? 3
@@ -184,7 +185,9 @@ const Home = () => {
               animate={{ y: 0, opacity: 1 }}
               transition={{ delay: 0.15 }}
             >
-              {isPro ? (
+              {isAdmin ? (
+                <><Crown size={14} /> Admin · Unlimited Access</>
+              ) : isPro ? (
                 <><Crown size={14} /> Unlimited analyses</>
               ) : (
                 <>{used}/{limit} analyses used</>

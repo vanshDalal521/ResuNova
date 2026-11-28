@@ -3,6 +3,8 @@ import Login from "./features/auth/pages/Login";
 import Register from "./features/auth/pages/Register";
 import Profile from "./features/auth/pages/Profile";
 import Protected from "./features/auth/components/Protected";
+import AdminLogin from "./features/admin/pages/AdminLogin";
+import AdminPanel from "./features/admin/pages/AdminPanel";
 import Home from "./features/interview/pages/Home";
 import Interview from "./features/interview/pages/Interview";
 import Landing from "./features/landing/pages/Landing";
@@ -25,6 +27,8 @@ export const router = createBrowserRouter([
     { path: "/profile", element: <Protected><Profile /></Protected> },
     { path: "/login", element: <Login /> },
     { path: "/register", element: <Register /> },
+    { path: "/admin/login", element: <AdminLogin /> },
+    { path: "/admin", element: <AdminPanel /> },
     { path: "/interview/:interviewId", element: <Protected><Interview /></Protected> },
     { path: "/preview/:capabilityId", element: <CapabilityPreview /> },
     { path: "/payment/success", element: <Protected><PaymentSuccess /></Protected> },

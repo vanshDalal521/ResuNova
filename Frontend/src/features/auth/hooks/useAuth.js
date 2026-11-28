@@ -22,7 +22,7 @@ export const useAuth = () => {
                 if (data.entitlements) {
                     setEntitlements(data.entitlements)
                 }
-                return true
+                return data.user
             }
         } catch (err) {
             setUser(null)

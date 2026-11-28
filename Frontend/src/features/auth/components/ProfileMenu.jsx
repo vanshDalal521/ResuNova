@@ -59,10 +59,18 @@ const ProfileMenu = () => {
                             <User size={16} />
                             View Account
                         </button>
-                        <button className="dropdown-item">
-                            <Shield size={16} />
-                            Security
-                        </button>
+                        {user.role === 'admin' && (
+                            <button
+                                className="dropdown-item"
+                                onClick={() => {
+                                    navigate('/admin')
+                                    setIsOpen(false)
+                                }}
+                            >
+                                <Shield size={16} />
+                                Admin Panel
+                            </button>
+                        )}
                         
                         <div style={{ margin: '0.5rem 0', height: '1px', background: 'rgba(255,255,255,0.05)' }} />
                         

@@ -136,22 +136,22 @@ const Login = () => {
 
                     {/* Form */}
                     <form onSubmit={handleSubmit} className="login-form" noValidate>
-                        {/* Email */}
+                        {/* Email or Username */}
                         <div className={`login-field ${focused === 'email' ? 'login-field--focused' : ''}`}>
-                            <label htmlFor="email" className="login-field__label">Email Address</label>
+                            <label htmlFor="email" className="login-field__label">Email Address or Username</label>
                             <div className="login-field__input-wrap">
                                 <Mail className="login-field__icon" size={17} />
                                 <input
                                     id="email"
-                                    type="email"
+                                    type="text"
                                     name="email"
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
                                     onFocus={() => setFocused('email')}
                                     onBlur={() => setFocused(null)}
-                                    placeholder="name@example.com"
+                                    placeholder="name@example.com or username"
                                     className="login-field__input"
-                                    autoComplete="email"
+                                    autoComplete="username"
                                 />
                             </div>
                         </div>
@@ -233,6 +233,12 @@ const Login = () => {
                         New to ResuNova?{' '}
                         <Link to="/register" className="login-card__register-link">
                             Begin Your Evolution
+                        </Link>
+                    </p>
+                    <p className="login-card__register" style={{ marginTop: '0.5rem', fontSize: '0.82rem' }}>
+                        Administrator?{' '}
+                        <Link to="/admin/login" className="login-card__register-link">
+                            Admin Command Portal
                         </Link>
                     </p>
                 </motion.div>

@@ -1,7 +1,10 @@
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useContext } from "react"
 import { fetchEntitlements } from "../services/entitlement.api"
+import { AuthContext } from "../auth.context"
 
 export function useEntitlements() {
+  const auth = useContext(AuthContext)
+  const isAdmin = auth?.user?.role === "admin" || false
   const [entitlements, setEntitlements] = useState(null)
   const [loading, setLoading] = useState(true)
 
@@ -21,18 +24,21 @@ export function useEntitlements() {
     refreshEntitlements()
   }, [refreshEntitlements])
 
-  const canAnalyze = entitlements
-    ? entitlements.plan === "pro" || (entitlements.usage?.remaining ?? 0) > 0
-    : true
+  const canAnalyze = isAdmin
+    ? true
+    : entitlements
+      ? entitlements.plan === "pro" || entitlements.isAdmin || (entitlements.usage?.remaining ?? 0) > 0
+      : true
 
-  const canViewTechnicalQuestions = entitlements?.features?.technicalQuestions ?? true
-  const canViewBehavioralQuestions = entitlements?.features?.behavioralQuestions ?? false
-  const canViewSevenDayPlan = entitlements?.features?.sevenDayPlan ?? false
+  const canViewTechnicalQuestions = isAdmin || (entitlements?.features?.technicalQuestions ?? true)
+  const canViewBehavioralQuestions = isAdmin || (entitlements?.features?.behavioralQuestions ?? false)
+  const canViewSevenDayPlan = isAdmin || (entitlements?.features?.sevenDayPlan ?? false)
 
   return {
     entitlements,
     loading,
     refreshEntitlements,
+    isAdmin,
     canAnalyze,
     canViewTechnicalQuestions,
     canViewBehavioralQuestions,

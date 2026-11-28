@@ -20,7 +20,8 @@ const Profile = () => {
     }) : "Recently"
 
     const initial = user.username?.charAt(0).toUpperCase() || "U"
-    const isPro = user.plan === 'pro' && user.subscriptionStatus === 'active'
+    const isAdmin = user.role === 'admin'
+    const isPro = isAdmin || (user.plan === 'pro' && user.subscriptionStatus === 'active')
 
     const handleManageBilling = async () => {
         setPortalLoading(true)
@@ -61,7 +62,7 @@ const Profile = () => {
                             <h1>{user.username}</h1>
                             <p className="user-email">{user.email}</p>
                             <span className={`badge ${isPro ? 'badge--pro' : 'badge--starter'}`}>
-                                {isPro ? 'Pro' : 'Starter'}
+                                {isAdmin ? 'Admin · Super Access' : isPro ? 'Pro' : 'Starter'}
                             </span>
                         </div>
                     </div>
@@ -104,12 +105,12 @@ const Profile = () => {
                                 </div>
                                 <div className="info-item__content">
                                     <label>Plan</label>
-                                    <p>{isPro ? 'Pro — Unlimited Reports' : 'Starter — 3 Reports / 24h'}</p>
+                                    <p>{isAdmin ? 'Admin — All Pro Features & Unlimited Reports' : isPro ? 'Pro — Unlimited Reports' : 'Starter — 3 Reports / 24h'}</p>
                                 </div>
                             </div>
                         </div>
 
-                        {isPro && (
+                        {isPro && !isAdmin && (
                             <div className="membership-section">
                                 <h3><CreditCard size={18} style={{ marginRight: '0.5rem' }} /> Subscription</h3>
                                 <button
