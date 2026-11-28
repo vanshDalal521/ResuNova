@@ -20,17 +20,24 @@ const PLAN_ENTITLEMENTS = {
 const RESERVATION_TTL_MS = 15 * 60 * 1000
 
 /**
- * Check whether a user is actively Pro.
+ * Check whether a user is an Admin.
+ */
+function isAdmin(user) {
+    return user?.role === "admin"
+}
+
+/**
+ * Check whether a user is actively Pro (or Admin, who gets full Pro privileges).
  */
 function isActivePro(user) {
-    return user.plan === "pro" && user.subscriptionStatus === "active"
+    return isAdmin(user) || (user?.plan === "pro" && user?.subscriptionStatus === "active")
 }
 
 /**
  * Get the effective entitlements for a user.
  */
 async function getUserEntitlements(userId) {
-    const user = await userModel.findById(userId).select("plan subscriptionStatus reportsUsedThisMonth lastReportReset")
+    const user = await userModel.findById(userId).select("role plan subscriptionStatus reportsUsedThisMonth lastReportReset")
     if (!user) throw new Error("User not found")
 
     return computeEntitlements(user)
@@ -41,6 +48,8 @@ function computeEntitlements(user) {
     const caps = PLAN_ENTITLEMENTS[planKey]
     return {
         plan: planKey,
+        role: user.role || "user",
+        isAdmin: isAdmin(user),
         subscriptionStatus: user.subscriptionStatus,
         ...caps,
     }
@@ -51,12 +60,14 @@ function computeEntitlements(user) {
  * Counts COMPLETED events + active RESERVED/PROCESSING events within the window.
  */
 async function getFreeUsageStatus(userId) {
-    const user = await userModel.findById(userId).select("plan subscriptionStatus reportsUsedThisMonth lastReportReset")
+    const user = await userModel.findById(userId).select("role plan subscriptionStatus reportsUsedThisMonth lastReportReset")
     if (!user) throw new Error("User not found")
 
     if (isActivePro(user)) {
         return {
             plan: "pro",
+            role: user.role || "user",
+            isAdmin: isAdmin(user),
             usage: {
                 limit: null,
                 used: null,
@@ -138,7 +149,7 @@ async function getFreeUsageStatus(userId) {
  * Require a specific feature. Throws if not entitled.
  */
 async function requireFeature(userId, feature) {
-    const user = await userModel.findById(userId).select("plan subscriptionStatus reportsUsedThisMonth lastReportReset")
+    const user = await userModel.findById(userId).select("role plan subscriptionStatus reportsUsedThisMonth lastReportReset")
     if (!user) {
         const err = new Error("User not found")
         err.statusCode = 401
@@ -189,7 +200,7 @@ async function requireFeature(userId, feature) {
  * Returns the reservation event if successful, null if limit reached.
  */
 async function reserveAnalysisUsage(userId, requestId) {
-    const user = await userModel.findById(userId).select("plan subscriptionStatus")
+    const user = await userModel.findById(userId).select("role plan subscriptionStatus")
     if (!user) return null
 
     if (isActivePro(user)) {
@@ -333,5 +344,6 @@ module.exports = {
     serializeReportForUser,
     computeEntitlements,
     isActivePro,
+    isAdmin,
     PLAN_ENTITLEMENTS,
 }

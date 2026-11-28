@@ -1,7 +1,6 @@
 const jwt = require("jsonwebtoken")
 const tokenBlacklistModel = require("../models/blacklist.model")
-
-
+const userModel = require("../models/user.model")
 
 async function authUser(req, res, next) {
 
@@ -39,5 +38,24 @@ async function authUser(req, res, next) {
 
 }
 
+async function requireAdmin(req, res, next) {
+    try {
+        if (!req.user?.id) {
+            return res.status(401).json({ success: false, message: "Authentication required" })
+        }
+        const user = await userModel.findById(req.user.id).select("role username email plan subscriptionStatus")
+        if (!user || user.role !== "admin") {
+            return res.status(403).json({
+                success: false,
+                message: "Forbidden: Admin privileges required",
+            })
+        }
+        req.adminUser = user
+        next()
+    } catch (err) {
+        console.error("requireAdmin error:", err.message)
+        return res.status(500).json({ success: false, message: "Server error verifying admin privileges" })
+    }
+}
 
-module.exports = { authUser }
+module.exports = { authUser, requireAdmin }

@@ -8,7 +8,7 @@ async function requirePro(req, res, next) {
         if (!user) {
             return res.status(401).json({ success: false, message: "User not found" })
         }
-        if (user.plan !== "pro" || user.subscriptionStatus !== "active") {
+        if (user.role !== "admin" && (user.plan !== "pro" || user.subscriptionStatus !== "active")) {
             return res.status(403).json({
                 success: false,
                 message: "This feature requires an active Pro subscription.",
@@ -39,8 +39,8 @@ async function checkReportLimit(req, res, next) {
             await user.save()
         }
 
-        // Pro users have unlimited reports
-        if (user.plan === "pro" && user.subscriptionStatus === "active") {
+        // Admin and Pro users have unlimited reports
+        if (user.role === "admin" || (user.plan === "pro" && user.subscriptionStatus === "active")) {
             req.dbUser = user
             return next()
         }
@@ -65,6 +65,7 @@ async function incrementReportCount(userId) {
         {
             _id: userId,
             $or: [
+                { role: "admin" },
                 { plan: "pro", subscriptionStatus: "active" },
                 { reportsUsedThisMonth: { $lt: STARTER_MONTHLY_LIMIT } }
             ]

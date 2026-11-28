@@ -11,10 +11,12 @@ for (const key of REQUIRED_ENV) {
 
 const app = require("./src/app")
 const connectToDB = require("./src/config/database")
+const { ensureAdminUser } = require("./src/services/adminSeed.service")
 
 async function startServer() {
     try {
         await connectToDB()
+        await ensureAdminUser()
         const PORT = process.env.PORT || 3001
         app.listen(PORT, () => {
             console.log(`Server is running on port ${PORT}`)

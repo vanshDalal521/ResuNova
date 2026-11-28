@@ -50,6 +50,8 @@ app.use(express.json({ limit: "1mb" }))
 app.use(express.urlencoded({ extended: true, limit: "1mb" }))
 app.use(cookieParser())
 
+const { ensureAdminUser } = require("./services/adminSeed.service")
+
 // DB connection middleware — Vercel serverless cold-start fix
 // On Render/local, server.js already connected; this is a ~0ms no-op
 app.use(async (req, res, next) => {
@@ -59,6 +61,7 @@ app.use(async (req, res, next) => {
                 serverSelectionTimeoutMS: 5000,
             })
         }
+        await ensureAdminUser()
         next()
     } catch (err) {
         console.error("Database connection error in middleware:", err.message)
@@ -146,6 +149,7 @@ const authRouter = require("./routes/auth.routes")
 const interviewRouter = require("./routes/interview.routes")
 const paymentRouter = require("./routes/payment.routes")
 const entitlementRouter = require("./routes/entitlement.routes")
+const adminRouter = require("./routes/admin.routes")
 const errorHandler = require("./middlewares/error.middleware")
 const { releaseExpiredReservations } = require("./services/entitlement.service")
 
@@ -154,6 +158,7 @@ app.use("/api/auth", authRouter)
 app.use("/api/interview", interviewRouter)
 app.use("/api/payment", paymentRouter)
 app.use("/api/entitlements", entitlementRouter)
+app.use("/api/admin", adminRouter)
 
 // Catch-all for unmatched /api/* routes — returns JSON instead of Vercel 404
 app.use("/api", (req, res) => {

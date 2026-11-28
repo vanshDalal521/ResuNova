@@ -20,6 +20,11 @@ const userSchema = new mongoose.Schema({
         enum: ["starter", "pro"],
         default: "starter",
     },
+    role: {
+        type: String,
+        enum: ["user", "admin"],
+        default: "user",
+    },
     stripeCustomerId: {
         type: String,
         default: null,

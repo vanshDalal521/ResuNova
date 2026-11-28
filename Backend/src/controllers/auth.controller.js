@@ -91,7 +91,9 @@ async function registerUserController(req, res, next) {
                 id: user._id,
                 username: user.username,
                 email: user.email,
+                role: user.role || "user",
                 plan: user.plan,
+                subscriptionStatus: user.subscriptionStatus,
                 reportsUsedThisMonth: user.reportsUsedThisMonth,
                 createdAt: user.createdAt
             },
@@ -155,7 +157,9 @@ async function loginUserController(req, res, next) {
                 id: user._id,
                 username: user.username,
                 email: user.email,
+                role: user.role || "user",
                 plan: user.plan,
+                subscriptionStatus: user.subscriptionStatus,
                 reportsUsedThisMonth: user.reportsUsedThisMonth,
                 createdAt: user.createdAt
             },
@@ -238,6 +242,7 @@ async function getMeController(req, res, next) {
                 id: user._id,
                 username: user.username,
                 email: user.email,
+                role: user.role || "user",
                 plan: user.plan,
                 subscriptionStatus: user.subscriptionStatus,
                 reportsUsedThisMonth: user.reportsUsedThisMonth,

@@ -62,8 +62,8 @@ async function generateInterViewReportController(req, res, next) {
             })
         }
 
-        // Determine feature scope based on plan
-        const user = await userModel.findById(req.user.id).select("plan subscriptionStatus")
+        // Determine feature scope based on plan (or admin role)
+        const user = await userModel.findById(req.user.id).select("role plan subscriptionStatus")
         const isPro = isActivePro(user)
 
         const interViewReportByAi = await generateInterviewReport({
@@ -166,14 +166,18 @@ async function getInterviewReportByIdController(req, res, next) {
             return res.status(400).json({ success: false, message: "Interview ID is required" })
         }
 
-        const interviewReport = await interviewReportModel.findOne({ _id: interviewId, user: req.user.id })
+        const user = await userModel.findById(req.user.id).select("role plan subscriptionStatus")
+        const query = user?.role === "admin"
+            ? { _id: interviewId }
+            : { _id: interviewId, user: req.user.id }
+
+        const interviewReport = await interviewReportModel.findOne(query)
 
         if (!interviewReport) {
             return res.status(404).json({ success: false, message: "Interview report not found." })
         }
 
         // Apply entitlement-aware serialization
-        const user = await userModel.findById(req.user.id).select("plan subscriptionStatus")
         const serialized = serializeReportForUser(interviewReport, user)
 
         res.status(200).json({
@@ -219,7 +223,12 @@ async function generateResumePdfController(req, res, next) {
             return res.status(400).json({ success: false, message: "Interview report ID is required" })
         }
 
-        const interviewReport = await interviewReportModel.findOne({ _id: interviewReportId, user: req.user.id })
+        const user = await userModel.findById(req.user.id).select("role")
+        const query = user?.role === "admin"
+            ? { _id: interviewReportId }
+            : { _id: interviewReportId, user: req.user.id }
+
+        const interviewReport = await interviewReportModel.findOne(query)
 
         if (!interviewReport) {
             return res.status(404).json({ success: false, message: "Interview report not found." })
