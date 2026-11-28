@@ -61,19 +61,31 @@ cd ResuNova
   MONGO_URI=your_mongodb_atlas_uri
   JWT_SECRET=your_jwt_signing_key
   GOOGLE_GENAI_API_KEY=your_gemini_api_key
-  FRONTEND_URL=http://localhost:5175
+  FRONTEND_URL=http://localhost:8080
   NODE_ENV=development
+
+  # Optional: Stripe billing
+  STRIPE_SECRET_KEY=your_stripe_secret_key
+  STRIPE_WEBHOOK_SECRET=your_stripe_webhook_secret
+  STRIPE_PRO_PRICE_ID=your_stripe_price_id
+
+  # Optional: provision the initial admin account (all three required)
+  ADMIN_USERNAME=your_admin_username
+  ADMIN_EMAIL=your_admin_email
+  ADMIN_PASSWORD=use-a-strong-unique-password
   ```
 - **Run**: `npm run dev`
+
+> **Admin access:** Admin provisioning is opt-in. When `ADMIN_USERNAME`, `ADMIN_EMAIL`, and `ADMIN_PASSWORD` are all set, ResuNova creates the account on startup. Existing accounts are never promoted automatically. Use a strong, unique password and keep these values out of version control.
 
 ### 3. Frontend Configuration
 - **Path**: `cd Frontend`
 - **Install**: `npm install`
-- **Environment**: Create a `.env` file:
+- **Environment**: Create a `.env` file. Leave `VITE_API_BASE_URL` empty in development to use the Vite proxy:
   ```env
-  VITE_API_BASE_URL=http://localhost:3000
+  # VITE_API_BASE_URL=http://localhost:3001
   ```
-- **Run**: `npm run dev -- --port 5175`
+- **Run**: `npm run dev` (Vite serves on port `8080` by default)
 
 ---
 
